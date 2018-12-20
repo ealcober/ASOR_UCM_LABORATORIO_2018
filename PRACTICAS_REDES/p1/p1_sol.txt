@@ -1,0 +1,209 @@
+CONFIGURACIÓN ESTÁTICA
+
+Ejercicio 2 [VM1,VM2, Router]. Activar los interfaces eth0 en las máquinas VM1, VM2 y Router, y asignar una dirección IP adecuada. La configuración debe realizarse con la utilidad ip, en particular los comandos ip address e ip link.
+
+[root@machine1 ~]# ip l set dev eth0 up
+[root@machine1 ~]# ip a add 10.0.0.1/24 dev eth0
+
+[root@machine2 ~]# ip l set dev eth0 up
+[root@machine2 ~]# ip a add 10.0.0.2/24 dev eth0
+
+[root@machine3 ~]# ip l set dev eth0 up
+[root@machine3 ~]# ip a add 10.0.0.3/24 dev eth0
+
+[root@machine3 ~]# ip l set dev eth1 up
+[root@machine3 ~]# ip a add 192.168.0.3/24 dev eth1
+
+[root@machine4 ~]# ip l set dev eth0 up
+[root@machine4 ~]# ip a add 192.168.0.4/24 dev eth0
+
+Ejercicio 1 [VM1]. Determinar los interfaces de red que tiene la máquina y las direcciones IP y/o MAC que tienen asignadas. Utilizar el comando ip.
+
+[root@VM1 ~]# ip a show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+--> link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+--> link/ether 02:00:00:00:01:00 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.0.1/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::ff:fe00:100/64 scope link 
+       valid_lft forever preferred_lft forever
+
+Ejercicio 3 [VM1,VM2]. Arrancar la herramienta wireshark y activar la captura en el interfaz de red. Comprobar la conectividad entre VM1 y VM2 con la orden ping. Observar el tráfico generado, especialmente los protocolos encapsulados en cada datagrama y las direcciones origen y destino. 
+
+[root@VM2 ~]# wireshark &
+[1] 2660
+
+[root@VM1 ~]# ping 10.0.0.2
+PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=0.364 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=0.239 ms
+^C
+--- 10.0.0.2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 999ms
+rtt min/avg/max/mdev = 0.239/0.301/0.364/0.064 ms
+
+-Tras la negociación ARP a nivel de enlace (req-reply entre mv1 y mv2), se envían paquetes sobre IpV4 con el protocolo ICMPv4. El campo Type (tipo) vale 8 en los echo-request y 0 en los echo-reply.
+
+Ejercicio 4 [VM1, VM2]. Ejecutar de nuevo la orden ping entre VM1 y VM2 y, a continuación, comprobar el estado de la tabla ARP en VM1 y VM2 usando el comando ip neigh. El significado del estado de cada entrada de la tabla se puede consultar en la página de manual del comando.
+
+[root@VM1 ~]# ip neigh
+10.0.0.2 dev eth0 lladdr 02:00:00:00:02:00 STALE
+
+ot@VM2 ~]# ip neigh
+10.0.0.1 dev eth0 lladdr 02:00:00:00:01:00 STALE
+
+Ejercicio 5 [Router, VM4]. Repetir la configuración de red para el segmento 192.168.0.0/24. Comprobar la conectividad entre Router y VM4; y entre Router, VM1 y VM2.
+
+- Hay que activar el reenvió de paquetes en VM3 (router)
+
+[root@VM3 ~]# sysctl net.ipv4.ip_forward=1
+net.ipv4.ip_forward = 1
+
+conectividad Router-VM4
+
+[root@VM3 ~]# ping -c 1 192.168.0.4
+PING 192.168.0.4 (192.168.0.4) 56(84) bytes of data.
+64 bytes from 192.168.0.4: icmp_seq=1 ttl=64 time=0.347 ms
+
+--- 192.168.0.4 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.347/0.347/0.347/0.000 ms
+
+Router-VM1,VM2
+
+[root@VM3 ~]# ping -c 1 10.0.0.1
+PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.
+64 bytes from 10.0.0.1: icmp_seq=1 ttl=64 time=0.338 ms
+
+--- 10.0.0.1 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.338/0.338/0.338/0.000 ms
+[root@VM3 ~]# ping -c 1 10.0.0.2
+PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=0.368 ms
+
+--- 10.0.0.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.368/0.368/0.368/0.000 ms
+
+ENCAMINAMIENTO ESTÁTICO
+
+Ejercicio 1 [Router]. Activar el reenvío de paquetes (​ forwarding ) ​ en Router para que efectivamente
+pueda funcionar como encaminador entre las redes 10.0.0.0/24 y 192.168.0.0/24. Ejecutar el
+comando:
+
+# sysctl net.ipv4.ip_forward=1
+
+Ejercicio 2 [VM1,VM2]. Añadir la máquina Router como encaminador por defecto para VM1 y VM2. Usar el comando ip route.
+
+[root@VM1 ~]# route add default gw 10.0.0.3
+[root@VM2 ~]# route add default gw 10.0.0.3
+
+Ejercicio 3 [VM4]. Aunque la configuración adecuada para la tabla de rutas de hosts en redes como las consideradas en esta práctica consiste en añadir una ruta por defecto, es posible incluir rutas para redes concretas. Añadir a la tabla de rutas de VM4 una ruta a la red 10.0.0.0/24 via Router.
+
+[root@VM4 ~]# ip r add 10.0.0.0/24 via 192.168.0.3
+
+
+Configuración dinámica de hosts
+
+Ejercicio 1 [VM1, VM2, VM4]. Eliminar las direcciones IP de los interfaces (ip addr del).
+
+[root@VM1 ~]# ip a del 10.0.0.1/24 dev eth0
+
+[root@VM2 ~]# ip a del 10.0.0.2/24 dev eth0
+
+[root@VM4 ~]# ip a del 192.168.0.4/24 dev eth0
+
+
+Ejercicio 2 [ Router]. Configurar el servidor DHCP para las dos redes:
+* Editar el fichero /etc/dhcp/dhcpd.conf y añadir dos secciones subnet para cada red que definan los rangos de direcciones, 10.0.0.50-10.0.0.100 y 192.168.0.50-192.168.0.100, respectivamente. Además, incluir la opción routers con la IP de Router en cada red. Ejemplo:
+subnet 10.0.0.0 netmask 255.255.255.0 {
+   range 10.0.0.11 10.0.0.50;
+    option routers 10.0.0.3;
+    option broadcast-address 10.0.0.255;
+}
+	* Arrancar el servicio con el comando service dhcpd start.
+
+archivo dhcpd.conf de ROUTER
+----------------------------
+
+subnet 10.0.0.0 netmask 255.255.255.0 {
+range 10.0.0.50 10.0.0.100;
+option routers 10.0.0.3;
+option broadcast-address 10.0.0.255;
+}
+
+subnet 192.168.0.0 netmask 255.255.255.0 {
+range 192.168.0.50 192.168.0.100;
+option routers 192.168.0.3;
+option broadcast-address 192.168.0.255;
+}
+
+----------------------------
+
+[root@VM1 ~]# dhclient -d eth0
+Internet Systems Consortium DHCP Client 4.2.5
+Copyright 2004-2013 Internet Systems Consortium.
+All rights reserved.
+For info, please visit https://www.isc.org/software/dhcp/
+
+Listening on LPF/eth0/02:00:00:00:01:00
+Sending on   LPF/eth0/02:00:00:00:01:00
+Sending on   Socket/fallback
+DHCPDISCOVER on eth0 to 255.255.255.255 port 67 interval 7 (xid=0x5c14dbf3)
+DHCPDISCOVER on eth0 to 255.255.255.255 port 67 interval 7 (xid=0x5c14dbf3)
+DHCPREQUEST on eth0 to 255.255.255.255 port 67 (xid=0x5c14dbf3)
+DHCPOFFER from 10.0.0.3
+DHCPACK from 10.0.0.3 (xid=0x5c14dbf3)
+bound to 10.0.0.50 -- renewal in 21110 seconds.
+
+Ejercicio 4 [VM4]. Durante el arranque del sistema se pueden configurar automáticamente determinados interfaces según la información almacenada en el disco del servidor. Consultar el fichero /etc/sysconfig/network-scripts/ifcfg-eth0 de VM4, que configura automáticamente eth0 usando DHCP. Para más información, consultar el fichero /usr/share/doc/initscripts-*/sysconfig.txt.
+
+File: /usr/share/doc/initscripts-9.49.41/sysconfig.txt
+[...]
+BOOTPROTO=none|bootp|dhcp
+      'bootp' or 'dhcp' cause a DHCP client to run on the device. Any other
+      value causes any static configuration in the file to be applied.
+    VLAN=yes|no
+    MTU=
+      Default MTU for this device
+    WINDOW=
+      Default window for routes from this device
+    PEERDNS=yes|no
+      modify /etc/resolv.conf if peer uses msdns extension (PPP only) or
+      DNS{1,2} are set, or if using dhclient. default to "yes".
+    DNS{1,2}=<ip address>
+      provide DNS addresses that are dropped into the resolv.conf
+      file if PEERDNS is not set to "no".
+    SCOPE=
+      Set to "scope SCOPE-ID" to set a non-default scope for a statically
+      configured IP address.
+    SRCADDR=
+      use the specified source address for outgoing packets
+    HWADDR=
+      ethernet hardware address for this device
+    MACADDR=
+      Set the hardware address for this device to this.
+      Use of this in conjunction with HWADDR= may cause
+      unintended behavior.
+    NOZEROCONF=
+      Set this to not set a route for dynamic link-local addresses
+      over this device.
+    PERSISTENT_DHCLIENT=yes|no|1|0
+      Without this option, or if it is 'no'/'0', and BOOTPROTO=dhcp,
+      dhclient is run for the interface in "one-shot" mode; if the
+      dhcp server does not respond for a configurable timeout, then
+      dhclient exits and the interface is not brought up -
+      the '-1' option is given to dhclient.
+[...]
+
+Ejercicio 5 [VM4]. Comprobar la configuración automática con las órdenes ifup e ifdown. Verificar la conectividad entre todas las máquinas de las dos redes.
+
+Comprobada mediante ping -c <ip_host>
+
+Comprobar prefijo ip's /24 (/X) corresponde al enunciado si falla conectividad chequeando ips con ip a
