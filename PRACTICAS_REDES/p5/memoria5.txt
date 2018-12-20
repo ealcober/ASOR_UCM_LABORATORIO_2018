@@ -1,0 +1,445 @@
+% script de configuracion ejecutado en cada máquina de la práctica.
+
+router 1
+#!/bin/bash
+ip l set dev eth0 up
+ip l set dev eth1 up
+ip l set dev eth2 up
+ip a add 172.16.0.1/16 dev eth0
+ip a add 172.19.0.1/16 dev eth1
+ip a add 192.168.0.1/24 dev eth2
+sysctl net.ipv4.ip_forward=1
+
+router 2
+#!/bin/bash
+ip l set dev eth0 up
+ip l set dev eth1 up
+ip l set dev eth2 up
+ip a add 172.16.0.2/16 dev eth0
+ip a add 172.17.0.2/16 dev eth1
+ip a add 192.168.1.2/24 dev eth2
+sysctl net.ipv4.ip_forward=1
+
+router 3
+#!/bin/bash
+ip l set dev eth0 up
+ip l set dev eth1 up
+ip l set dev eth2 up
+ip a add 172.18.0.3/16 dev eth0
+ip a add 172.17.0.3/16 dev eth1
+ip a add 192.168.2.3/24 dev eth2
+sysctl net.ipv4.ip_forward=1
+
+router 4
+#!/bin/bash
+ip l set dev eth0 up
+ip l set dev eth1 up
+ip l set dev eth2 up
+ip a add 172.18.0.4/16 dev eth0
+ip a add 172.19.0.4/16 dev eth1
+ip a add 192.168.3.4/24 dev eth2
+sysctl net.ipv4.ip_forward=1
+
+Ejercicio 1. Configurar todas las máquinas virtuales Router1...Router4 según se muestra en la figura
+anterior. Debe comprobarse para cada una de las máquinas que:
+Los encaminadores adyacentes son alcanzables, por ejemplo Router1 recibe respuesta a las
+solicitudes de ​ ping​ enviadas a Router2 y Router4.
+La tabla de encaminamiento de cada encaminador es la correcta e incluye una entrada para cada
+una de las tres redes a las que está conectado.
+
+OK
+
+Ejercicio 2 ​ . Configurar RIP en todos los encaminadores para que intercambien información de
+encaminamiento. El proceso consiste en:
+● Crear un archivo ​ ripd.conf en ​ /etc/quagga usando como referencia el archivo que se muestra
+a continuación.
+● Iniciar los demonios con ​ service ripd start
+
+echo -e "#Activar el encaminamiento por RIP\nrouter rip\n# Definir la versión del protocolo que se usará\nversion 2\n#Habilitar información de encaminamiento en redes asociadas a los interfaces\nnetwork eth0\nnetwork eth1\nnetwork eth2" > /etc/quagga/ripd.conf
+
+service ripd start
+
+Ejercicio 3. Usando el comando ​ vtysh​ , consultar la tabla de encaminamiento de RIP y de ​ zebra en cada
+encaminador. Comprobar también la tabla de encaminamiento del ​ kernel ​ con el comando ​ ip​ .
+
+vtysh -c "show ip rip"
+vtysh -c "show ip route"
+ip route
+
+# router 1
+
+[root@localhost ~]# vtysh -c "show ip rip"
+Codes: R - RIP, C - connected, S - Static, O - OSPF, B - BGP
+Sub-codes:
+      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
+      (i) - interface
+
+     Network            Next Hop         Metric From            Tag Time
+C(i) 172.16.0.0/16      0.0.0.0               1 self              0
+R(n) 172.17.0.0/16      172.16.0.2            2 172.16.0.2        0 02:56
+R(n) 172.18.0.0/16      172.19.0.4            2 172.19.0.4        0 02:59
+C(i) 172.19.0.0/16      0.0.0.0               1 self              0
+C(i) 192.168.0.0/24     0.0.0.0               1 self              0
+R(n) 192.168.1.0/24     172.16.0.2            2 172.16.0.2        0 02:56
+R(n) 192.168.2.0/24     172.16.0.2            3 172.16.0.2        0 02:56
+R(n) 192.168.3.0/24     172.19.0.4            2 172.19.0.4        0 02:59
+[root@localhost ~]# vtysh -c "show ip route"
+Codes: K - kernel route, C - connected, S - static, R - RIP,
+       O - OSPF, I - IS-IS, B - BGP, A - Babel,
+       > - selected route, * - FIB route
+
+C>* 127.0.0.0/8 is directly connected, lo
+C>* 172.16.0.0/16 is directly connected, eth0
+R>* 172.17.0.0/16 [120/2] via 172.16.0.2, eth0, 00:01:34
+R>* 172.18.0.0/16 [120/2] via 172.19.0.4, eth1, 00:01:34
+C>* 172.19.0.0/16 is directly connected, eth1
+C>* 192.168.0.0/24 is directly connected, eth2
+R>* 192.168.1.0/24 [120/2] via 172.16.0.2, eth0, 00:01:34
+R>* 192.168.2.0/24 [120/3] via 172.16.0.2, eth0, 00:01:34
+R>* 192.168.3.0/24 [120/2] via 172.19.0.4, eth1, 00:01:34
+[root@localhost ~]# ip r
+172.16.0.0/16 dev eth0 proto kernel scope link src 172.16.0.1 
+172.17.0.0/16 via 172.16.0.2 dev eth0 proto zebra metric 2 
+172.18.0.0/16 via 172.19.0.4 dev eth1 proto zebra metric 2 
+172.19.0.0/16 dev eth1 proto kernel scope link src 172.19.0.1 
+192.168.0.0/24 dev eth2 proto kernel scope link src 192.168.0.1 
+192.168.1.0/24 via 172.16.0.2 dev eth0 proto zebra metric 2 
+192.168.2.0/24 via 172.16.0.2 dev eth0 proto zebra metric 3 
+192.168.3.0/24 via 172.19.0.4 dev eth1 proto zebra metric 2 
+
+Ejercicio 4 ​ . Con ayuda de la herramienta ​ wireshark​ , estudiar los mensajes RIP intercambiados, en
+particular comprobar:
+● Encapsulado
+● Direcciones origen y destino
+● Campo de versión
+● Información para cada ruta: campos de dirección de red, máscara de red, dirección de siguiente
+salto y distancia.
+
+  /* dos primeros paquetes request y response resumidos */
+
+[root@localhost cursoredes]# cat wireshark_rip_req_resp.txt 
+No.     Time           Source                Destination           Protocol Length Info
+      1 0.000000000    172.16.0.1            224.0.0.9             RIPv2    66     Request
+
+Frame 1: 66 bytes on wire (528 bits), 66 bytes captured (528 bits) on interface 0
+
+    Encapsulation type: Ethernet (1)
+Ethernet II, Src: 02:00:00:00:01:00 (02:00:00:00:01:00), Dst: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+    Destination: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+        Address: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: 02:00:00:00:01:00 (02:00:00:00:01:00)
+        Address: 02:00:00:00:01:00 (02:00:00:00:01:00)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: IP (0x0800)
+Internet Protocol Version 4, Src: 172.16.0.1 (172.16.0.1), Dst: 224.0.0.9 (224.0.0.9)
+    Version: 4
+    Header length: 20 bytes
+    Time to live: 1
+    Protocol: UDP (17)
+    Source: 172.16.0.1 (172.16.0.1)
+    Destination: 224.0.0.9 (224.0.0.9)
+User Datagram Protocol, Src Port: router (520), Dst Port: router (520)
+    Source port: router (520)
+    Destination port: router (520)
+    Length: 32
+    Checksum: 0x8c4c [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+Routing Information Protocol
+    Command: Request (1)
+    Version: RIPv2 (2)
+    Address not specified, Metric: 16
+        Address Family: Unspecified (0)
+        Route Tag: 0
+        Netmask: 0.0.0.0 (0.0.0.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 16
+
+No.     Time           Source                Destination           Protocol Length Info
+      2 0.000289558    172.16.0.2            172.16.0.1            RIPv2    126    Response
+
+Frame 2: 126 bytes on wire (1008 bits), 126 bytes captured (1008 bits) on interface 0
+    Encapsulation type: Ethernet (1)
+    [Protocols in frame: eth:ip:udp:rip]
+    [Coloring Rule Name: UDP]
+    [Coloring Rule String: udp]
+Ethernet II, Src: 02:00:00:00:02:00 (02:00:00:00:02:00), Dst: 02:00:00:00:01:00 (02:00:00:00:01:00)
+    Destination: 02:00:00:00:01:00 (02:00:00:00:01:00)
+        Address: 02:00:00:00:01:00 (02:00:00:00:01:00)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: 02:00:00:00:02:00 (02:00:00:00:02:00)
+        Address: 02:00:00:00:02:00 (02:00:00:00:02:00)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: IP (0x0800)
+Internet Protocol Version 4, Src: 172.16.0.2 (172.16.0.2), Dst: 172.16.0.1 (172.16.0.1)
+    Version: 4
+    Header length: 20 bytes
+    Time to live: 64
+    Protocol: UDP (17)
+    Header checksum: 0x250f [validation disabled]
+        [Good: False]
+        [Bad: False]
+    Source: 172.16.0.2 (172.16.0.2)
+    Destination: 172.16.0.1 (172.16.0.1)
+User Datagram Protocol, Src Port: router (520), Dst Port: router (520)
+    Source port: router (520)
+    Destination port: router (520)
+    Length: 92
+    Checksum: 0xc67a [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+Routing Information Protocol
+    Command: Response (2)
+    Version: RIPv2 (2)
+    IP Address: 172.17.0.0, Metric: 1
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 172.17.0.0 (172.17.0.0)
+        Netmask: 255.255.0.0 (255.255.0.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 1
+    IP Address: 172.18.0.0, Metric: 2
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 172.18.0.0 (172.18.0.0)
+        Netmask: 255.255.0.0 (255.255.0.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 2
+    IP Address: 192.168.1.0, Metric: 1
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 192.168.1.0 (192.168.1.0)
+        Netmask: 255.255.255.0 (255.255.255.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 1
+    IP Address: 192.168.2.0, Metric: 2
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 192.168.2.0 (192.168.2.0)
+        Netmask: 255.255.255.0 (255.255.255.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 2
+
+/* resto de paquetes */
+
+No.     Time           Source                Destination           Protocol Length Info
+      4 2.898429054    172.16.0.1            224.0.0.9             RIPv2    126    Response
+
+Frame 4: 126 bytes on wire (1008 bits), 126 bytes captured (1008 bits) on interface 0
+    Interface id: 0
+    Encapsulation type: Ethernet (1)
+    Arrival Time: Nov 18, 2018 13:02:17.765364524 CET
+    [Time shift for this packet: 0.000000000 seconds]
+    Epoch Time: 1542542537.765364524 seconds
+    [Time delta from previous captured frame: 2.897529541 seconds]
+    [Time delta from previous displayed frame: 2.897529541 seconds]
+    [Time since reference or first frame: 2.898429054 seconds]
+    Frame Number: 4
+    Frame Length: 126 bytes (1008 bits)
+    Capture Length: 126 bytes (1008 bits)
+    [Frame is marked: True]
+    [Frame is ignored: False]
+    [Protocols in frame: eth:ip:udp:rip]
+    [Coloring Rule Name: UDP]
+    [Coloring Rule String: udp]
+Ethernet II, Src: 02:00:00:00:01:00 (02:00:00:00:01:00), Dst: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+    Destination: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+        Address: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: 02:00:00:00:01:00 (02:00:00:00:01:00)
+        Address: 02:00:00:00:01:00 (02:00:00:00:01:00)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: IP (0x0800)
+Internet Protocol Version 4, Src: 172.16.0.1 (172.16.0.1), Dst: 224.0.0.9 (224.0.0.9)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0xc0 (DSCP 0x30: Class Selector 6; ECN: 0x00: Not-ECT (Not ECN-Capable Transport))
+        1100 00.. = Differentiated Services Codepoint: Class Selector 6 (0x30)
+        .... ..00 = Explicit Congestion Notification: Not-ECT (Not ECN-Capable Transport) (0x00)
+    Total Length: 112
+    Identification: 0x86b4 (34484)
+    Flags: 0x02 (Don't Fragment)
+        0... .... = Reserved bit: Not set
+        .1.. .... = Don't fragment: Set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 1
+    Protocol: UDP (17)
+    Header checksum: 0x65ee [validation disabled]
+        [Good: False]
+        [Bad: False]
+    Source: 172.16.0.1 (172.16.0.1)
+    Destination: 224.0.0.9 (224.0.0.9)
+User Datagram Protocol, Src Port: router (520), Dst Port: router (520)
+    Source port: router (520)
+    Destination port: router (520)
+    Length: 92
+    Checksum: 0x8c88 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+Routing Information Protocol
+    Command: Response (2)
+    Version: RIPv2 (2)
+    IP Address: 172.18.0.0, Metric: 2
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 172.18.0.0 (172.18.0.0)
+        Netmask: 255.255.0.0 (255.255.0.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 2
+    IP Address: 172.19.0.0, Metric: 1
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 172.19.0.0 (172.19.0.0)
+        Netmask: 255.255.0.0 (255.255.0.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 1
+    IP Address: 192.168.0.0, Metric: 1
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 192.168.0.0 (192.168.0.0)
+        Netmask: 255.255.255.0 (255.255.255.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 1
+    IP Address: 192.168.3.0, Metric: 2
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 192.168.3.0 (192.168.3.0)
+        Netmask: 255.255.255.0 (255.255.255.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 2
+
+No.     Time           Source                Destination           Protocol Length Info
+      8 7.575052462    172.16.0.2            224.0.0.9             RIPv2    126    Response
+
+Frame 8: 126 bytes on wire (1008 bits), 126 bytes captured (1008 bits) on interface 0
+    Interface id: 0
+    Encapsulation type: Ethernet (1)
+    Arrival Time: Nov 18, 2018 13:02:22.441987932 CET
+    [Time shift for this packet: 0.000000000 seconds]
+    Epoch Time: 1542542542.441987932 seconds
+    [Time delta from previous captured frame: 1.911925757 seconds]
+    [Time delta from previous displayed frame: 1.911925757 seconds]
+    [Time since reference or first frame: 7.575052462 seconds]
+    Frame Number: 8
+    Frame Length: 126 bytes (1008 bits)
+    Capture Length: 126 bytes (1008 bits)
+    [Frame is marked: True]
+    [Frame is ignored: False]
+    [Protocols in frame: eth:ip:udp:rip]
+    [Coloring Rule Name: UDP]
+    [Coloring Rule String: udp]
+Ethernet II, Src: 02:00:00:00:02:00 (02:00:00:00:02:00), Dst: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+    Destination: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+        Address: IPv4mcast_00:00:09 (01:00:5e:00:00:09)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: 02:00:00:00:02:00 (02:00:00:00:02:00)
+        Address: 02:00:00:00:02:00 (02:00:00:00:02:00)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: IP (0x0800)
+Internet Protocol Version 4, Src: 172.16.0.2 (172.16.0.2), Dst: 224.0.0.9 (224.0.0.9)
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0xc0 (DSCP 0x30: Class Selector 6; ECN: 0x00: Not-ECT (Not ECN-Capable Transport))
+        1100 00.. = Differentiated Services Codepoint: Class Selector 6 (0x30)
+        .... ..00 = Explicit Congestion Notification: Not-ECT (Not ECN-Capable Transport) (0x00)
+    Total Length: 112
+    Identification: 0xbe98 (48792)
+    Flags: 0x02 (Don't Fragment)
+        0... .... = Reserved bit: Not set
+        .1.. .... = Don't fragment: Set
+        ..0. .... = More fragments: Not set
+    Fragment offset: 0
+    Time to live: 1
+    Protocol: UDP (17)
+    Header checksum: 0x2e09 [validation disabled]
+        [Good: False]
+        [Bad: False]
+    Source: 172.16.0.2 (172.16.0.2)
+    Destination: 224.0.0.9 (224.0.0.9)
+User Datagram Protocol, Src Port: router (520), Dst Port: router (520)
+    Source port: router (520)
+    Destination port: router (520)
+    Length: 92
+    Checksum: 0x9282 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+Routing Information Protocol
+    Command: Response (2)
+    Version: RIPv2 (2)
+    IP Address: 172.17.0.0, Metric: 1
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 172.17.0.0 (172.17.0.0)
+        Netmask: 255.255.0.0 (255.255.0.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 1
+    IP Address: 172.18.0.0, Metric: 2
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 172.18.0.0 (172.18.0.0)
+        Netmask: 255.255.0.0 (255.255.0.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 2
+    IP Address: 192.168.1.0, Metric: 1
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 192.168.1.0 (192.168.1.0)
+        Netmask: 255.255.255.0 (255.255.255.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 1
+    IP Address: 192.168.2.0, Metric: 2
+        Address Family: IP (2)
+        Route Tag: 0
+        IP Address: 192.168.2.0 (192.168.2.0)
+        Netmask: 255.255.255.0 (255.255.255.0)
+        Next Hop: 0.0.0.0 (0.0.0.0)
+        Metric: 2
+
+Ejercicio 5 ​ . Eliminar el enlace entre Router1 y Router4 (p.ej. desactivando el interfaz ​ eth1 en Router4).
+Comprobar que Router1 deja de recibir los anuncios de Router4 y que, pasados aproximadamente 3
+minutos (valor de ​ timeout ​ por defecto para las rutas), ha reajustado su tabla.
+
+ANTES
+
+[root@localhost ~]# vtysh -c "show ip rip"
+Codes: R - RIP, C - connected, S - Static, O - OSPF, B - BGP
+Sub-codes:
+      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
+      (i) - interface
+
+     Network            Next Hop         Metric From            Tag Time
+C(i) 172.16.0.0/16      0.0.0.0               1 self              0
+R(n) 172.17.0.0/16      172.16.0.2            2 172.16.0.2        0 02:24
+R(n) 172.18.0.0/16      172.19.0.4            2 172.19.0.4        0 02:40
+C(i) 172.19.0.0/16      0.0.0.0               1 self              0
+C(i) 192.168.0.0/24     0.0.0.0               1 self              0
+R(n) 192.168.1.0/24     172.16.0.2            2 172.16.0.2        0 02:24
+R(n) 192.168.2.0/24     172.16.0.2            3 172.16.0.2        0 02:24
+R(n) 192.168.3.0/24     172.19.0.4            2 172.19.0.4        0 02:40
+
+[root@localhost ~]# vtysh -c "show ip rip"
+Codes: R - RIP, C - connected, S - Static, O - OSPF, B - BGP
+Sub-codes:
+      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
+      (i) - interface
+
+     Network            Next Hop         Metric From            Tag Time
+C(i) 172.16.0.0/16      0.0.0.0               1 self              0
+R(n) 172.17.0.0/16      172.16.0.2            2 172.16.0.2        0 03:00
+R(n) 172.18.0.0/16      172.16.0.2            3 172.16.0.2        0 03:00
+C(i) 172.19.0.0/16      0.0.0.0               1 self              0
+C(i) 192.168.0.0/24     0.0.0.0               1 self              0
+R(n) 192.168.1.0/24     172.16.0.2            2 172.16.0.2        0 03:00
+R(n) 192.168.2.0/24     172.16.0.2            3 172.16.0.2        0 03:00
+R(n) 192.168.3.0/24     172.16.0.2            4 172.16.0.2        0 03:00
+[root@localhost ~]# 

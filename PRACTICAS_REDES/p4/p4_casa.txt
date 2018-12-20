@@ -1,0 +1,150 @@
+++++++++++++++++++++++++++++ Direcciones de enlace local (link-local) ++++++++++++++++++++++++++++
+
+Formato:
+○ Prefijo de formato (10 bits): 1111 1110 10 (FE80::/10)
+○ Los siguientes 54 bits son 0
+○ Identificador de interfaz (64 bits)
+
+Una dirección de enlace local es únicamente válida en la subred que está definida. Ningún
+encaminador dará salida a un datagrama con una dirección de enlace local como destino. El prefijo
+de formato para estas direcciones es ​ fe80::/10​ .
+
+Ejercicio 1 [VM1,VM2]. Activar el interfaz ​ eth0 en VM1 y VM2 y comprobar las direcciones de
+enlace local que tienen asignadas. La consulta de las direcciones del interfaz debe realizarse con el comando ​ ip​ (ip a)
+
+MV1 - inet6 fe80::ff:fe00:100/64 scope link
+MV2 - inet6 fe80::ff:fe00:100/64 scope link
+
+Ejercicio 2 [VM1,VM2]. Comprobar la conectividad entre VM1 y VM2 con la orden ​ ping6​ . Cuando se
+usan direcciones de enlace local, ​ y sólo en ese caso​ , es necesario especificar el interfaz origen, añadiendo ​ %<nombre_interfaz> a la dirección. Consultar las opciones del comando ​ ping6 en la página de manual.
+
+MV1: (fe80::ff:fe00:100%eth0)
+[root@localhost ~]# ping6 -c 2 fe80::ff:fe00:200%eth0
+PING fe80::ff:fe00:200%eth0(fe80::ff:fe00:200%eth0) 56 data bytes
+64 bytes from fe80::ff:fe00:200%eth0: icmp_seq=1 ttl=64 time=0.238 ms
+64 bytes from fe80::ff:fe00:200%eth0: icmp_seq=2 ttl=64 time=0.227 ms
+
+--- fe80::ff:fe00:200%eth0 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1000ms
+rtt min/avg/max/mdev = 0.227/0.232/0.238/0.016 ms
+MV2: (fe80::ff:fe00:200%eth0)
+[root@localhost ~]# ping6 -c 2 fe80::ff:fe00:100%eth0
+PING fe80::ff:fe00:100%eth0(fe80::ff:fe00:100%eth0) 56 data bytes
+64 bytes from fe80::ff:fe00:100%eth0: icmp_seq=1 ttl=64 time=0.293 ms
+64 bytes from fe80::ff:fe00:100%eth0: icmp_seq=2 ttl=64 time=0.238 ms
+
+--- fe80::ff:fe00:100%eth0 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 999ms
+rtt min/avg/max/mdev = 0.238/0.265/0.293/0.031 ms
+
+Ejercicio 3 [VM1,VM2]. ​ Arrancar la herramienta ​ wireshark y observar el tráfico que genera la
+orden ​ ping6​ , especialmente los protocolos encapsulados en cada datagrama y los parámetros del
+protocolo IPv6.
+
+frame.protocols = eth:ipv6:icmpv6
+
+eth : Destino: 02:00:00:00:01:00 Origen: 02:00:00:00:02:00
+ipv6: Origen: fe80::ff:fe00:200 Destino: fe80::ff:fe00:100
+icmpv6: Type: 135 Neighbor solicitation Code: 0 TargetAddress: fe80::ff:fe00:100
+
+Me extraña en wireshark que el paquete Neighbor solicitation no va dirigido a broadcast sino directamente a la ip destino de ipv6-link-scope a igual. de mac a mac. ¿Es para confirmar, tras el ping? ¿Antes del ping en la autoconfiguración, si que va a broadcast?
+
+
++++++++++++++++++++++++++++++++++++ Direcciones IPv6: ULA +++++++++++++++++++++++++++++++++++
+
+
+Formato:
+○ Prefijo de formato (7 bits): fc00::/7
+○ Bit 8: 1 indica que el prefijo se asigna localmente (a 0 no está definido)
+○ Identificador global (40 bits): aleatorio para evitar colisiones
+○ Identificador de subred (16 bits): 65.536 subredes por sitio, para crear la estructura de red interna
+○ Identificador de interfaz (64 bits)
+
+Ejercicio 1 [VM1,VM2]. Configurar VM1 y VM2 para que tengan una dirección ULA en la red
+fd00:0:0:a::/64​ . El comando que se utilizará es ​ ip addr​ . La parte de identificador de interfaz
+puede elegirse libremente siempre que no coincida para ambas máquinas. ​ Nota: ​ Incluir la longitud
+del prefijo al fijar las direcciones.
+
+MV1:
+[root@localhost ~]# ip a add fc01:a34F:5a32:1::ff:fe00:100/64 dev eth0
+MV2:
+[root@localhost ~]# ip a add fc01:a34F:5a32:1::ff:fe00:200/64 dev eth0
+
+Ejercicio 2 [VM1,VM2]. Comprobar la conectividad entre VM1 y VM2 con la orden ​ ping6 usando la
+nueva dirección. Observar el contenido de las tramas intercambiadas con ​ wireshark​ .
+Ejercicio 3 [Router,VM4]. Activar el interfaz ​ eth0 de VM4 y los dos interfaces de Router.
+Comprobar la conectividad entre Router y VM1, y entre Router y VM4 usando la dirección de enlace
+local. ​ Nota​ : Recordar la necesidad en este caso de especificar el interfaz origen.
+
+mv1
+
+[root@localhost ~]# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 02:00:00:00:01:00 brd ff:ff:ff:ff:ff:ff
+    inet6 fc01::a:0:0:ff:100/64 scope global 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::ff:fe00:100/64 scope link 
+       valid_lft forever preferred_lft forever
+
+mv2
+
+[root@localhost ~]# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 02:00:00:00:02:00 brd ff:ff:ff:ff:ff:ff
+    inet6 fc01::a:0:0:ff:200/64 scope global 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::ff:fe00:200/64 scope link 
+       valid_lft forever preferred_lft forever
+
+mv3
+
+[root@localhost ~]# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 02:00:00:00:03:00 brd ff:ff:ff:ff:ff:ff
+    inet6 fc01:0:0:a::300/64 scope global 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::ff:fe00:300/64 scope link 
+       valid_lft forever preferred_lft forever
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 02:00:00:00:03:01 brd ff:ff:ff:ff:ff:ff
+    inet6 fc01:0:0:b::300/64 scope global 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::ff:fe00:301/64 scope link 
+       valid_lft forever preferred_lft forever
+
+mv4
+
+[root@localhost ~]# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 02:00:00:00:04:00 brd ff:ff:ff:ff:ff:ff
+    inet6 fc01:0:0:b::4000/64 scope global 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::ff:fe00:400/64 scope link 
+       valid_lft forever preferred_lft forever
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

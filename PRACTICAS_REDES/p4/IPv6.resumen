@@ -1,0 +1,35 @@
+IPv6
+
+- 8 x 16 bits HX
+- 1A9F = 4x4 = 16 bits
+
+Compactar IPv6
+
+1.- suprimir 0's izquierda
+2.- doble 2 puntos (SE APLICA UNA ÚNICA VEZ, SI NO NO SE PUEDE DISTINGUIR EL NUMERO DE SEGMENTOS)
+
+2001:0DB8:0000:0000:0006:0600:300D:527B
+
+=
+
+1ªregla
+2001:DB8:0:0:6:600:300D:527B
+
+2ªregla
+2001:DB8::6:600:300D:527B
+
+1080:0:0:0:8:800:200C:417A = 1080::8:800:200C:417A
+FF01:0:0:0:0:0:0:101       = FF01::101
+0:0:0:0:0:0:0:1			   = ::1 (loopback)
+0:0:0:0:0:0:0:0            = ::
+
+1080:0:0:0:8:800:200C:417A/60 = los primeros 60 bits son red, y el resto hasta los 128 bits host, asign. a interfaz.
+
+En ipv4 la ip identifica un host, en ipv6 ip identifica una INTERFAZ.
+
+	X 	:	X 	:	X 	:	X 	:	X 	:	X 	: 	X 	:	X
+	_________________    ________  __________________________
+	pref.del sitio		 id.			ID de interfaz
+						subred
+
+-Id Subred e id de Interfaz depende del prefijo del sitio

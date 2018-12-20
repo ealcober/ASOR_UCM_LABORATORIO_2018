@@ -1,0 +1,218 @@
+
+Primeros pasos con GDB
+
+jjgrodriguez@gmail.com
+
+Este documento pretende ser una breve y sencilla guía práctica al depurador GDB (http://gnu.org). A lo largo de esta guía, usaremos como ejemplo un sencillo programa cuyo código se muestra a continuación:
+
+#include <stdio.h>
+
+int main() {
+
+ int v = 0;
+
+   int i;
+
+ for (i = 0; i < 5; i++) {
+
+   v += i;
+
+ }
+
+ printf("Resultado: %i\n", v);
+
+ return 0;
+
+}
+
+Lo primero que hemos de hacer es compilar dicho programa con la opción "-g" para que se incluya la información necesaria para la depuración. Si el programa está guardado en un archivo
+
+$ gcc -g -o test test.c
+
+Una vez compilado, podemos comenzar la depuración invocando a gbd con el nombre del archivo compilado.
+
+$ gdb test
+
+   GNU gdb 5.3-debian
+
+   Copyright 2002 Free Software Foundation, Inc.
+
+   GDB is free software, covered by the GNU General Public License, and you are
+
+   welcome to change it and/or distribute copies of it under certain conditions.
+
+   Type "show copying" to see the conditions.
+
+   There is absolutely no warranty for GDB. Type "show warranty" for details.
+
+   This GDB was configured as "i386-linux"...
+
+   (gdb)
+
+La línea "(gdb)" nos indica que el depurador está listo para empezar a procesar nuestras órdenes. El primer comando que veremos es (l)ist. Este comando muestra el código fuente del programa que estoy depurando.
+
+(gdb) l
+
+   1 #include <stdio.h>
+
+   2
+
+   3 int main() {
+
+   4
+
+   5 int v = 0;
+
+   6 int i;
+
+   7
+
+   8 for (i = 0; i < 5; i++) {
+
+   9 v += i;
+
+   10 }
+
+(gdb)
+
+Para ejecutar el programa, utilizamos el comando (r)un. Como aún no hemos puesto ningún punto de ruptura, el programa se ejecutará entero.
+
+(gdb) r
+
+   Starting program: /ramdisk/home/knoppix/test
+
+   Resultado: 10
+
+   Program exited normally.
+
+(gdb)
+
+Vamos a colocar ahora un punto de ruptura. Como su nombre indica, un punto de ruptura es un punto donde la ejecución de nuestro programa se detiene. Para colocar un punto de ruptura utilizamos el comando (b)reakpoint seguido de la línea donde queremos ponerlo.
+
+(gdb) b 9
+
+   Breakpoint 1 at 0x804834e: file test.c, line 9.
+
+(gdb)
+
+Ya tenemos un punto de ruptura en la línea 9. Si ahora ejecutamos el programa se detendrá cuando llegue a esa línea.
+
+(gdb) r
+
+   Starting program: /ramdisk/home/knoppix/test
+
+   Breakpoint 1, main () at test.c:9
+
+   9 v += i;
+
+(gdb)
+
+Para continuar la ejecución del programa utilizamos el comando (c)ontinue. En nuestro ejemplo, el programa se volverá a detener en el mismo punto de ruptura.
+
+(gdb) c
+
+   Continuing.
+
+   Breakpoint 1, main () at test.c:9
+
+   9 v += i;
+
+(gdb) c
+
+   Continuing.
+
+   Breakpoint 1, main () at test.c:9
+
+   9 v += i;
+
+(gdb) c
+
+   Continuing.
+
+   Breakpoint 1, main () at test.c:9
+
+   9 v += i;
+
+(gdb) c
+
+   Continuing.
+
+   Breakpoint 1, main () at test.c:9
+
+   9 v += i;
+
+(gdb) c
+
+   Continuing.
+
+   Resultado: 10
+
+   Program exited normally.
+
+(gdb)
+
+Puesto que tenemos un punto de ruptura en el bucle y este da 5 vueltas, hemos tenido que continuar 5 veces para ejecutar el programa completo. También es posible ejecutar el programa línea a línea con el comando (n)ext.
+
+(gdb) r
+
+   Starting program: /ramdisk/home/knoppix/test
+
+   Breakpoint 2, main () at test.c:9
+
+   9 v += i;
+
+   (gdb) n
+
+   8 for (i = 0; i < 5; i++) {
+
+   (gdb) n
+
+   Breakpoint 2, main () at test.c:9
+
+   9 v += i;
+
+(gdb)
+
+En cualquier momento podemos ver el valor de una variable con el comando (p)rint seguido del nombre de la variable.
+
+(gdb) p v
+
+   $1 = 1
+
+   (gdb) c
+
+   Continuing.
+
+   Breakpoint 2, main () at test.c:9
+
+   9 v += i;
+
+(gdb) c
+
+   Continuing.
+
+   Breakpoint 2, main () at test.c:9
+
+   9 v += i;
+
+(gdb) p v
+
+   $2 = 6
+
+(gdb)
+
+Para eliminar un punto de ruptura utilizamos el comando delete y el número del punto a eliminar. En nuestro ejemplo
+
+(gdb) delete 1
+
+(gdb)
+
+Por último, para salir del depurador utilizamos el comando (q)uit.
+
+Hay mucha más información disponible tanto en la página del manual como en los archivos info:
+
+$ man gdb
+
+$ info gdb
+
+También puede utilizarse interfaces gráficos para trabajar con GB de manera más cómoda. Uno de esos interfaces es DD y puede descargarse en http://sourceforge.net/projects/ddd/

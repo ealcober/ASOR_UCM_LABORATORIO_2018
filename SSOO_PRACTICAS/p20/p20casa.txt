@@ -1,0 +1,251 @@
+Comandos y secuencias de comandos.
+Ejercicio 1. Consultar la página de manual de man (man man​ ) . Especialmente las secciones y las partes de una página de manual (NAME, SYNOPSIS, DESCRIPTION...)
+
+man [1,2,3..9] <comando>
+1   Programas ejecutables y guiones del intérprete de órdenes
+2   Llamadas del sistema (funciones servidas por el núcleo)
+3   Llamadas de la biblioteca (funciones contenidas en las  bibliotecas
+    del sistema)
+
+man -k printf
+    Busca  la palabra clave printf entre las descripciones breves y las
+    páginas de manual y presenta todas las que casen.
+
+man -f smail
+    Busca las páginas de manual referenciadas por smail  e  imprime  la
+    descripcion breve de las que encuentre.
+
+A modo de ejemplo usaremos el comando echo en esta sección.
+
+Ejercicio 1 ​ . Estudiar el funcionamiento del comando ​ echo​ . Qué hacen las opciones -n ​ y -​e. Imprimir la frase “Ampliación de Sistemas Operativos 
+y Redes” con un tabulador al principio.
+
+-n     do not output the trailing newline
+
+-e     enable interpretation of backslash escapes
+
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo -e "\tAmpliación de Sistemas Operativos y Redes"
+	Ampliación de Sistemas Operativos y Redes
+
+La shell dispone de una serie de ​ meta-caracteres que permiten controlar su comportamiento. En especial: ​ || && ; ( ) | & ​ sirven para generar 
+secuencias o listas de comandos.
+
+Ejercicio 2. ​ Estudiar para qué sirven los metacaracteres anteriores:
+
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo linea uno;echo línea dos; echo línea tres
+linea uno
+línea dos
+línea tres
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo linea uno && echo linea dos && echo linea tres
+linea uno
+linea dos
+linea tres
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo linea uno || echo linea dos;echo linea tres
+linea uno
+linea tres
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ (echo En una sub-shell; exit 0) && echo terminó bien || echo terminó mal
+En una sub-shell
+terminó bien
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ (echo En una sub-shell; exit 1) && echo terminó bien || echo terminó mal
+En una sub-shell
+terminó mal
+
+Ejercicio 1 . ​ ​ Consultar el entorno mediante ​ env​ , e identificar algunas variables importantes.
+
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ env
+[elimino muchas dejo las ppales]
+LANG=es_ES.UTF-8
+GDM_LANG=es_ES.UTF-8
+DISPLAY=:1
+USERNAME=ealcober
+JAVA_HOME=/usr/lib/jvm/java-8-oracle
+J2SDKDIR=/usr/lib/jvm/java-8-oracle
+XDG_VTNR=2
+XDG_SESSION_ID=4
+USER=ealcober
+DESKTOP_SESSION=openbox
+PWD=/home/ealcober/cuarto/ASOR/SSOO_PRACTICAS/p20
+HOME=/home/ealcober
+SHELL=/bin/bash
+GDMSESSION=openbox
+LOGNAME=ealcober
+PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:
+/usr/lib/jvm/java-8-oracle/jre/bin
+OLDPWD=/home/ealcober/cuarto/ASOR/SSOO_PRACTICAS
+_=/usr/bin/env
+
+// $ guarda codigo de salida
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ (exit 0);echo $?;(exit 4); echo $?
+0
+4
+// ppid del proceso actual
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $$ $PPID
+5593 5582
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ ps -p $$ -o "pid ppid cmd"
+  PID  PPID CMD
+ 5593  5582 /bin/bash
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $$
+5593
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ ps
+  PID TTY          TIME CMD
+ 5593 pts/1    00:00:00 bash
+ 7458 pts/1    00:00:00 ps
+
+
+Ejercicio 2 ​ . El valor de las variables se puede acceder con el prefijo $. Consultar el valor, y
+determinar el significado de: USER, UID, HOME, PWD, SHELL, $, PPID y ?. Ejemplo:
+
+
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $USER
+ealcober
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $UID
+1000
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $HOME
+/home/ealcober
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $PWD
+/home/ealcober/cuarto/ASOR/SSOO_PRACTICAS/p20
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $SHELL
+/bin/bash
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $PPID
+5582
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $?
+0
+
+Ejercicio 3. Fijar el valor de las variables VARIABLE​ 1, VARIABLE​ 2 y ​ VARIABLE3 a “Curso”, “de” y “Ampliación de SO”, respectivamente. Imprimir 
+la frase “Curso de administración” accediendo a las variables. Ejecutar otra shell (comando ​ bash​ ) y volver a ejecutar la orden que imprime la frase.
+Hacer que la frase se imprima correctamente en la nueva shell (orden ​ export​ ).
+
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ VARIABLE1=Curso
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ VARIABLE2=de
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ VARIABLE3=Ampliación de SO
+bash: de: no se encontró la orden
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ VARIABLE3="Ampliación de SO"
+ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $VARIABLE1 $VARIABLE2 $VARIABLE3
+Curso de Ampliación de SO
+
+Ejercicio 4. Las colisiones entre variables se pueden evitar poniendo el nombre de la variable entre llaves. Fijar la variable VAR1 a “1+1=” y VAR12 
+a “error”. Usando el comando echo y el contenido de la variable VAR1 escribir las cadena “1+1=2”.
+
+ealcober@debian:~$ VAR1="1+1="
+ealcober@debian:~$ VAR12=error
+ealcober@debian:~$ echo $VAR12
+error
+ealcober@debian:~$ echo ${VAR1}2
+1+1=2
+
+Las Comillas:
+
+En la shell hay tres tipos de comillas
+- dobles    ": realiza sustituciones de variables. "El usuario es $USER"
+- simples   ': no sustituye el valor de las variables. 'El usuario es $USER'
+- ejecución `: sustituye por el valor de la ejecución del comando. "El usuario es `whoami`"
+
+Ejercicio 1. Imprimir las frases anteriores usando echo. Probar  la forma $(comando) como alternativa a `comando` en el último ejemplo.
+
+ealcober@debian:~$ echo "El usuario es $USER"
+El usuario es ealcober
+ealcober@debian:~$ echo 'El usuario es $USER'
+El usuario es $USER
+ealcober@debian:~$ echo "El usuario es `whoami`"
+El usuario es ealcober
+ealcober@debian:~$ echo "El usuario es $(whoami)"
+El usuario es ealcober
+
+
+El path
+Ejercicio 1. Los comandos son programas (ficheros) en el sistema . Los directorios en los que la shell busca los comandos esta en la variable PATH. Consultar su valor.
+
+ealcober@debian:~$ echo $PATH
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin
+
+Ejercicio 2. Añadir el directorio actual al PATH. Qué diferencia hay entre añadir ./ y $PWD.
+
+añadir directorio al path de forma persistente
+
+ealcober@debian:~$ echo "export PATH=$PATH:`pwd`" >> ~/.bashrc 
+ealcober@debian:~$ tail .bashrc 
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin://home/ealcober:/home/ealcober
+
+
+Ejercicio 3. La orden which determina qué comando se ejecutará cuando se usa en la línea de comandos.  Determinar qué fichero se usa para ejecutar bash, env, gzip, echo, set y ls. Además se puede ver qué tipo de archivo es con la orden file. 
+
+ealcober@debian:~$ which ls
+/bin/ls
+ealcober@debian:~$ which bash
+/bin/bash
+ealcober@debian:~$ which env
+/usr/bin/env
+ealcober@debian:~$ which gzip
+/bin/gzip
+ealcober@debian:~$ which echo
+/bin/echo
+
+
+Ejercicio 4. Siempre se puede ejecutar un comando que no esté en el path especificando su ruta completa, ya sea de forma relativa o absoluta. Quitar el valor de la variable PATH de la shell usando unset:
+
+ealcober@debian:~$ echo $PATH
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin://home/ealcober
+ealcober@debian:~$ unset PATH
+ealcober@debian:~$ echo $PATH
+
+ealcober@debian:~$ source .bashrc 
+ealcober@debian:~$ echo $PATH
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin://home/ealcober:/home/ealcober
+
+* Se puede mostrar la frase “Curso de Ampliación de SO” con echo, ¿por qué?
+* Usar el path absoluto del comando ls determinado en el ejercicio anterior para listar los archivos.
+
+ealcober@debian:~$ which echo
+/bin/echo
+ealcober@debian:~$ /bin/echo "palomitas"
+palomitas
+
+Ejercicio 1. Estudiar el comando sort (man sort). Ordenar las palabras (cada una en una línea, \n) zorro pájaro vaca caballo abeja y paloma, usando el comando echo y encadenando su salida (tubería ‘|’) al comando sort.
+
+ealcober@debian:~$ echo -e "zorro\npájaro\nvaca\ncaballo\nabeja\npaloma" | sort >> ordenado
+ealcober@debian:~$ cat ordenado 
+abeja
+caballo
+pájaro
+paloma
+vaca
+zorro
+
+Ejercicio 2. Escribir las palabras anteriores en un fichero (texto1) usando el comando echo y la redirección (‘>’). Repetir el ejercicio anterior usando en este caso el fichero y no la entrada estándar del comando sort.
+
+ealcober@debian:~/test$ echo -e "zorro\npájaro\nvaca\ncaballo\nabeja\npaloma" > sinordenar
+ealcober@debian:~/test$ cat sinordenar | sort > ordenado
+ealcober@debian:~/test$ cat ordenado 
+abeja
+caballo
+pájaro
+paloma
+vaca
+zorro
+
+Los procesos tienen tres flujos por defecto: la entrada estándar (descriptor 0), la salida estándar (descriptor 1) y la salida estándar de error (descriptor 2). Cada uno de estos  flujos se pueden tratar independientemente usando su número de descriptor.
+
+
+
+Ejercicio 3. Ejecutar en el directorio $HOME el comando ls -l text* nada* > salida. ¿Qué sucede?, ¿cuáles son los contenidos del fichero salida (cat salida)?. 
+
+ealcober@debian:~/test$ ls -l text* nada* > salida
+ls: no se puede acceder a 'nada*': No existe el fichero o el directorio
+ealcober@debian:~/test$ cat salida 
+-rw-r--r-- 1 ealcober ealcober 40 nov 10 12:31 texto1
+
+
+Ejercicio 2. Con el comando anterior redirigir la salida estándar a salida.out y la salida estándar de error a salida.error. Comprobar el contenido.
+
+
+
+Ejercicio 4. El operador de redirección (>) ‘trunca’ el contenido del fichero. Se puede añadir al contenido ya existente mediante (>>) . Repetir el comando anterior pero sin borrar el contenido de los ficheros y comprobar el resultado.

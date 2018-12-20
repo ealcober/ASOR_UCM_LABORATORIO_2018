@@ -1,0 +1,169 @@
+#!/usr/bin/awk -f
+
+# Formato del archivo:
+# machine <number> <interfaz,switch>*
+
+function modifyvm(name, iface, net, mac) {
+  orden="vboxmanage modifyvm " name " --nic" iface " intnet --cableconnected" iface " on --nicpromisc" iface " allow-vms --intnet" iface " " net " --macaddress" iface " " mac
+  print "Ejecutando " orden
+  #res=system(orden)
+  res=system("vboxmanage modifyvm \"" name "\" --nic" iface " intnet --cableconnected" iface " on --nicpromisc" iface " allow-vms --intnet" iface " " net " --macaddress" iface " " mac)
+  return res
+}
+
+function testvm(name) {
+  orden="vboxmanage list vms | grep -w " name " >/dev/null"
+  res=system(orden)
+  res=system("vboxmanage list vms | grep -w \"" name "\" >/dev/null")
+  return res
+}
+
+function testsnap(base, snap) {
+  orden="vboxmanage list hdds | grep -w " snap " >/dev/null"
+  #res=system(orden)
+  res=system("vboxmanage list hdds | grep -w \"" snap "\" >/dev/null")
+  return res
+}
+
+function newvm(base, name, snap) {
+  res=testsnap(base, snap)
+  if (res==0) {
+    print "Ya existe el snapshot " snap
+    } else {
+    print "No existe el snapshot " snap
+    orden="vboxmanage snapshot " base " take " snap
+    print "Ejecutando " orden
+    #res=system(orden)
+    res=system("vboxmanage snapshot \"" base "\" take \"" snap "\"")
+    #return res
+  }
+  orden=sprintf("vboxmanage clonevm \"%s\" --snapshot \"%s\" --mode machine --options link --register --basefolder \"%s\" --name \"%s\"",base,snap,VM_DIR,name)
+  printf("Ejecutando %s", orden)
+  #res1=system(orden)
+  res1=system("vboxmanage clonevm \"" base "\" --snapshot \"" snap "\" --mode machine --options link --register --basefolder \"" VM_DIR "\" --name \"" name "\"")
+  # --basefolder \"" VM_DIR "\"
+  if (res1!=0) {
+    print "Error al clonar la máquina base " base " con nombre " name
+    return res1
+  }
+  orden="vboxmanage modifyvm " name " --uart1 0x3f8 4"
+  res2=system(orden)
+  return  res1+res2
+}
+
+function startvm(name) {
+  res=testvm(name)
+  if (res!=0) {
+    print "La máquina " name " no existe."
+    } else {
+    orden="vboxmanage startvm " name
+    #res=system(orden)
+    res=system("vboxmanage startvm \"" name "\"")
+  }
+  return res
+}
+
+function newfrontend(base, name, nets) {
+  print "Creando frontend con nombre " name
+  frontsnap=base "_snapshot"
+  res=newvm(base, name, frontsnap)
+  i=0
+  for (n in nets) {
+    print "Red " n " con " nets[n] " interfaces conectadas."
+    i++
+    mac=sprintf("02000000%02x%02x",0xff,i-1)
+    modifyvm(name, i, n, mac)
+  }
+}
+
+BEGIN {
+  IFS=","
+  VMACHINE_BASE="ASOR-FE"
+  SNAP=VMACHINE_BASE "_snapshot"
+  VMACHINE_NAME="asorfemachine"
+  NET_NAME="switch"
+  FE_BASE="Debian FE"
+  FE_NAME="femachine"
+  VM_DIR=ENVIRON["HOME"] "/RedesVMs"
+  frontendstart="no"
+}
+
+$1=="machine" {
+  number=$2
+  name=VMACHINE_NAME "_" number
+  print "Máquina " name
+  err=testvm(name)
+  if (err==0) {
+    print "La máquina " name " ya existe."
+    }
+  else {
+    print "Creando la máquina " name
+    res=newvm(VMACHINE_BASE, name, SNAP)
+    if (res!=0) {
+      print "Error al crear la máquina " name
+      next
+    }
+  }
+
+  nif=NF-2
+  for (i=3;i<=NF;i++) {
+    iface=$i+1
+    i++
+    netname=NET_NAME "_" $i
+    mac=sprintf("02000000%02x%02x",number,iface-1)
+    networks[netname]++ # número de ifaces conectados a esa red
+    print "Interfaz eth" iface-1 " conectada a red " netname " con mac=" mac
+    res=modifyvm(name, iface, netname, mac)
+    if (res!=0) {
+      print "Error al modificar la máquina " name
+      next
+    }
+  }
+  res=startvm(name)
+  if (res!=0) {
+    print "Error al iniciar la máquina " name
+    next
+  }
+}
+
+$1=="frontend" {
+  nif=NF-2
+  for (i=2;i<=NF;i++) {
+    net=$i
+    netname=NET_NAME "_" $i
+    if (netname in networks) {
+      print "Interfaz eth" i-2 " conectada a red " netname
+      netfrontend[netname]++ # interfaz conectada a esa red
+    } else {
+      print "No existe la red " netname
+    }
+  }
+}
+
+$1=="base" {
+  VMACHINE_BASE=$0
+  sub($1 FS,"",VMACHINE_BASE)
+  print "Máquina base: " VMACHINE_BASE
+  SNAP=VMACHINE_BASE "_snapshot"
+}
+
+$1=="prefix" {
+  VMACHINE_NAME=$0
+  sub($1 FS,"",VMACHINE_NAME)
+  print "Prefijo: " VMACHINE_NAME
+}
+
+$1=="netprefix" {
+  NET_NAME=$2
+}
+
+$1=="frontendstart" {
+  frontendstart=$2
+}
+
+END {
+  if (frontendstart=="yes") {
+    newfrontend(FE_BASE, FE_NAME, netfrontend)
+    startvm(FE_NAME)
+  }
+}

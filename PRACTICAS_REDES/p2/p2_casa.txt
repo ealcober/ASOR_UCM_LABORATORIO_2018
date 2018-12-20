@@ -1,0 +1,255 @@
+Ejercicio 1. Consultar las páginas de manual para ​ nc y ​ netstat​ . Probar algunas de las opciones para
+ambos programas para familiarizarse con su comportamiento.
+
+-l <listen mode>
+CLIENT: nc [-options] hostname port[s] [ports] ...
+SERVER: nc -l -p port [-options] [hostname] [port]
+
+Ejercicio 2. (LISTEN) Abrir un servidor TCP en el puerto 7777 en VM1 usando el comando ​ nc​ . Comprobar
+el estado de la conexión en el servidor con el comando ​ netstat​ .
+Ejercicio 3. (ESTABLISHED) En VM2, iniciar una conexión cliente al servidor arrancado en el ejercicio
+anterior.
+
+nc -l -p 7777
+nc 192.168.0.1 7777
+
+tcp        0      0 localhost.localdoma:cbt 172.16.0.1:39740        ESTABLISHED
+
+[cursoredes@localhost ~]$ ss -l | grep cbt
+tcp    LISTEN     0      10      *:cbt                   *:*                    
+tcp    LISTEN     0      10     :::cbt                  :::*        
+
+[cursoredes@localhost ~]$ cat /etc/services | grep cbt
+cbt             7777/tcp                # cbt
+cbt             7777/udp                # cbt
+
+sysctl net.ipv4.ip_forward=1
+
+Ejercicio 3. (ESTABLISHED) En VM2, iniciar una conexión cliente al servidor arrancado en el ejercicio
+anterior.
+
+***Comprobar el estado de la conexión e identificar los parámetros (dirección IP y puerto) usando
+el comando ​ netstat​ .
+
+[cursoredes@localhost ~]$ ss -l | grep cbt
+tcp    LISTEN     0      10      *:cbt                   *:*                    
+tcp    LISTEN     0      10     :::cbt                  :::*        
+
+[cursoredes@localhost ~]$ netstat -l | grep cbt
+tcp        0      0 0.0.0.0:cbt             0.0.0.0:*               LISTEN     
+tcp6       0      0 [::]:cbt                [::]:*                  LISTEN    
+
+[cursoredes@localhost ~]$ netstat  | grep cbt
+tcp        0      0 localhost.localdoma:cbt 192.168.0.2:41722       ESTABLISHED
+
+[cursoredes@localhost ~]$ ss | grep cbt
+tcp    ESTAB      0      0      192.168.0.1:cbt                192.168.0.2:41722   
+
+***Reiniciar el servidor en VM1 usando la opción ​ -s 192.168.0.1​ . Comprobar si es posible la
+conexión desde VM1 usando como dirección destino ​ localhost​ . Observar la diferencia con el
+comando anterior (sin opción ​ -s​ ) usando ​ netstat​ .
+
+NO ME DEJA HACERLO CON -s
+
+***Iniciar el servidor e intercambiar un único carácter con el cliente. Con ayuda de ​ wireshark​ ,
+observar los mensajes intercambiados (especialmente los números de secuencia, confirmación y
+flags TCP) y determinar cuántos bytes (y número de mensajes) han sido necesarios.
+
+
+
+Ejercicio 4. (TIMEWAIT) Cerrar la conexión en el servidor (con Ctl+C) y comprobar el estado de la
+conexión con ​ netstat​ . Usar la opción ​ -o​ para determinar el valor del temporizador TIMEWAIT.
+
+[root@localhost ~]# netstat -o | grep cb
+tcp6       0      0 localhost:43250         localhost:cbt           TIME_WAIT   timewait (50.06/0/0)
+
+1	0.000000000	192.168.0.1	192.168.0.2	TCP	68	cbt > 41740 [PSH, ACK] Seq=1 Ack=1 Win=227 Len=2 TSval=4774093 TSecr=5454228
+
+2	0.000168000	192.168.0.2	192.168.0.1	TCP	66	41740 > cbt [ACK] Seq=1 Ack=3 Win=229 Len=0 TSval=5510560 TSecr=4774093
+
+DATA=61:0a
+
+
+Ejercicio 5. ( ​ SYN-SENT y SYN-RCVD) El comando ​ iptables permite filtrar paquetes según los flags TCP del segmento (opción ​ --tcp-flags​ ):
+
+● Fijar una regla que permita filtrar las conexiones en el servidor (VM1) de forma que deje al
+cliente en el estado SYN-SENT. Comprobar el resultado con el comando ​ netstat en el cliente
+(VM2).
+
+REGLA EN MÁQUINA 1 :
+	iptables -A OUTPUT -d 192.168.0.2 -p tcp --tcp-flags ALL SYN,ACK -j DROP
+
+RESULT EN MAQUINA 2:
+
+[cursoredes@localhost ~]$ netstat -o |grep cb
+tcp        0      1 localhost.localdo:41744 192.168.0.1:cbt         SYN_SENT    on (0.66/2/0)
+
+target     prot opt source               destination         
+DROP       tcp  --  anywhere             192.168.0.2          tcp flags:FIN,SYN,RST,PSH,ACK,URG/SYN,ACK
+
+Fijar una regla que permita filtrar las conexiones en el cliente (VM2) de forma que deje al
+servidor en el estado SYN-RCVD. Además esta regla debe dejar al servidor también en el estado
+LAST-ACK después de cerrar la conexión (con Ctrl+C) en el cliente.
+
+
+regla en cliente
+iptables -A INPUT -s 192.168.0.1 -p tcp --tcp-flags ALL SYN,ACK -j DROP
+
+[root@localhost ~]# netstat   | grep cb
+tcp        0      0 localhost.localdoma:cbt 192.168.0.2:41768       SYN_RECV 
+
+Ejercicio 6. Finalmente, intentar una conexión a un puerto cerrado del servidor (ej. 7778) y, con ayuda de
+la herramienta ​ wireshark​ , observar los mensajes TCP intercambiados, especialmente los flags TCP.
+
+Responde al SYN de intento de conexión con un paquete TCP con los flags RST+ACK
+
+Introducción a la seguridad en el protocolo TCP
+
+Ejercicio 1. El ataque SYN ​ flood consiste en saturar un servidor por el envío masivo de mensajes con el
+flag ​ SYN.
+● (Cliente VM2) Para evitar que el atacante responda al mensaje SYN+ACK del servidor con un
+mensaje RST que liberaría los recursos, bloquearemos los mensajes SYN+ACK en el atacante con
+iptables​ .
+
+[root@localhost ~]# iptables -A OUTPUT -p tcp --tcp-flags ALL SYN,ACK -j DROP
+
+● (Cliente VM2) Para enviar paquetes TCP con los datos de interés usaremos el comando ​ hping3
+(estudiar la página de manual). En este caso, enviaremos mensajes SYN al puerto 23 del servidor
+(​ telnet​ ) lo más rápido posible (​ flood ​ ).
+● (Servidor VM1) Estudiar el comportamiento de la máquina, en términos del número de paquetes
+recibidos. Comprobar si es posible la conexión al servicio ​ ssh​ (22).
+● (Servidor VM1) Activar la defensa SYN ​ cookies en el servidor con el comando ​ sysctl (parámetro
+net.ipv4.tcp_syncookies​ ). Comprobar si es posible la conexión al servicio ​ ssh​ (22).
+
+[root@localhost ~]# hping3 -S --flood --rand-source -p 22 192.168.0.1 
+
+al estar el puerto cerrado devuelve RST
+
+si lo hago al p 23, no permite la conexión de otra máquina ya que llena la cola de conexiones en estado SYN_RCVD.
+
+Al activar el net.ipv4.tcp_syncookies​ el problema se soluciona volviendo a permitir las onexiones
+
+Ejercicio 2. ​ (Técnica CONNECT) Netcat permite explorar puertos usando la técnica CONNECT que
+intenta establecer una conexión a un puerto determinado. En función de la respuesta (SYN+ACK o RST),
+es posible determinar si hay un proceso escuchando.
+● (Servidor VM1) Abrir un servidor en el puerto 7777.
+● (Cliente VM2) Explorar de uno en uno, el rango de puertos 7775-7780 usando ​ nc​ , en este caso
+usar las opciones de exploración (​ -z​ ) y de salida detallada (​ -v​ ). ​ Nota: La versión de ​ nc instalada
+en la VM no soporta rangos de puertos. Por tanto, se debe hacer manualmente, o bien, incluir la
+sentencia de exploración de un puerto en un bucle para automatizar el proceso.
+● Con ayuda de ​ wireshark​ observar los paquetes intercambiados.
+
+[root@localhost ~]# cat script.sh 
+#!/bin/bash 
+
+CONTADOR=7775
+while [  $CONTADOR -lt 7781 ]; do
+   echo $CONTADOR && nc -z -v 192.168.0.1 $CONTADOR  >> result.txt
+   let CONTADOR=CONTADOR+1 
+done
+
+
+
+[root@localhost ~]# ./script.sh 
+7775
+Ncat: Version 7.50 ( https://nmap.org/ncat )
+Ncat: Connection refused.
+7776
+Ncat: Version 7.50 ( https://nmap.org/ncat )
+Ncat: Connection refused.
+7777
+Ncat: Version 7.50 ( https://nmap.org/ncat )
+Ncat: Connected to 192.168.0.1:7777.
+Ncat: 0 bytes sent, 0 bytes received in 0.01 seconds.
+7778
+Ncat: Version 7.50 ( https://nmap.org/ncat )
+Ncat: Connection refused.
+7779
+Ncat: Version 7.50 ( https://nmap.org/ncat )
+Ncat: Connection refused.
+7780
+Ncat: Version 7.50 ( https://nmap.org/ncat )
+Ncat: Connection refused.
+
+
+Opciones y parámetros TCP
+El comportamiento de la conexión TCP se puede controlar con varias opciones que se incluyen en la
+cabecera en los mensajes SYN y que son configurables en el sistema operativo. La siguiente tabla incluye
+alguna de las opciones y las variables asociadas del kernel:
+
+Escalado de la ventana - net.ipv4.tcp_window_scaling
+
+TCP window scale option. The TCP window scale option is an option to increase the receive window size allowed in Transmission Control Protocol above its former maximum value of 65,535 bytes
+
+[root@localhost ~]# cat /proc/sys/net/ipv4/tcp_window_scaling
+1
+
+por defecto activado
+
+La opción timestamp permite calcular de una forma más precisa el RTT. Por defecto está activado:
+
+net.ipv4.tcp_timestamps = 1
+
+Con Selective ACK SACK se logra una mejora en la performance general de TCP (pasa de ser un algoritmo GO-BACK-N a Selective Repeat). Esta opción se negocia durante el handshake inicial. Por defecto es 1:
+
+net.ipv4.tcp_sack = 1
+
+Selective Acknowledgment (SACK) is a strategy which corrects this behavior in the face of multiple dropped segments. With selective acknowledgments, the data receiver can inform the sender about all segments that have arrived successfully, so the sender need retransmit only the segments that have actually been lost.
+
+
+
+ The procedures involving keepalive use three user-driven variables:
+
+tcp_keepalive_time
+
+    the interval between the last data packet sent (simple ACKs are not considered data) and the first keepalive probe; after the connection is marked to need keepalive, this counter is not used any further 
+
+tcp_keepalive_intvl
+
+    the interval between subsequential keepalive probes, regardless of what the connection has exchanged in the meantime 
+
+tcp_keepalive_probes
+
+    the number of unacknowledged probes to send before considering the connection dead and notifying the application layer 
+
+
+Traducción de direcciones (NAT) y reenvío de puertos (​ port
+forwarding ​ )
+En esta sección supondremos que la red que conecta Router (VM3) con VM4 es pública y que no puede
+encaminar el tráfico ​ 192.168.0.0/24​ . Además, asumiremos que la IP de Router es dinámica.
+Ejercicio 1. ​ Configurar la traducción de direcciones dinámica en Router:
+● (VM3 - Router) Configurar Router para que haga SNAT (​ masquerade ​ ) sobre la interfaz ​ eth1
+usando el comando ​ iptables​ .
+
+[root@localhost ~]# iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+
+
+● (VM1) Comprobar la conexión entre VM1 y VM4 con la orden ​ ping​ .
+
+
+● (VM4 y VM1) Usando ​ wireshark​ , determinar la IP origen y destino de los ICMP de Echo request y
+Echo reply en ambas redes. ¿Qué parámetro se utiliza, en lugar del puerto origen, para
+relacionar las solicitudes de Echo con las respuestas? 
+
+se usa el campo ID del paquete.
+
+Comprueba la salida del comando
+conntrack -L​ o alternativamente el fichero ​ /proc/net/nf_conntrack​ .
+
+
+    El objetivo SNAT de la tabla NAT permite cambiar la dirección origen y
+opcionalmente el puerto
+● Se aplica a la cadena POSTROUTING
+● Permite implementar: NAPT con IP pública fija
+●
+iptables –t nat –A POSTROUTING –o ppp0 –j SNAT --to 175.20.12.1
+
+Ejercicio 2. ​ Acceso a un servidor en la red privada:
+● (VM1) Arrancar el servidor con ​ nc​ en el puerto 7777.
+● (VM3 - Router) Usando el comando ​ iptables reenviar las conexiones al puerto 80 de Router al
+puerto 7777 de VM1.
+● (VM4) Conectarse al puerto 80 de Router con ​ nc y comprobar el resultado en VM1. Analizar el
+tráfico intercambiado con ​ wireshark​ , especialmente los puertos y direcciones IP origen y
+destino en ambas redes.
+
+[root@localhost ~]# iptables -t nat -A PREROUTING -d 172.16.0.3 -p tcp --dport 80 -j DNAT --to 192.168.0.1:7777

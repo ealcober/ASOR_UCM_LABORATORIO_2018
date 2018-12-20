@@ -1,0 +1,310 @@
+
+Ejercicio 1. La política de planificación y la prioridad de un proceso puede consultarse y modificarse con el comando chrt. Adicionalmente el comando nice/renice permite ajustar el valor de nice de un proceso. Consultar la página de manual de ambos comandos y comprobar su funcionamiento cambiando el valor de nice de la shell a -10 y después cambiar su política de planificación a FIFO con prioridad 12.
+
+ealcober@debian:~$ sudo renice -n -10 16023
+[sudo] password for ealcober: 
+16023 (process ID) prioridad anterior 0, nueva prioridad -10
+
+ealcober@debian:~$ sudo chrt -f -p 12 16023
+
+Ejercicio 2. Escribir un programa que muestre la política de planificación como una cadena y la prioridad (igual que chrt), además de mostrar los valores máximo y mínimo de la prioridad para la política de planificación. 
+
+#include <sched.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+
+int main(int argc, char* argv[]){
+
+
+
+	
+	int scheduler = sched_getscheduler(getpid());
+	int pid = getpid();
+	struct sched_param p;
+	int res =sched_getparam(0, &p);
+
+	int pmax = sched_get_priority_max(scheduler);
+	int pmin = sched_get_priority_min(scheduler);
+	// printf("SCHED_OTHER: %d\n",SCHED_OTHER); // 0
+	// printf("SCHED_FIFO: %d\n",SCHED_FIFO);   // 1
+    // printf("SCHED_RR: %d\n",SCHED_RR);       // 2
+  	
+    switch(scheduler){
+    	case 0:
+    		printf("política actual de planificación del pid %d: SCHED_OTHER\n", pid);
+    		break;
+    	case 1:
+    		printf("política actual de planificación del pid %d: SCHED_FIFO\n", pid);
+    		break;
+    	case 2:
+    		printf("política actual de planificación del pid %d: SCHED_RR\n", pid);
+    		break;
+    	default:
+    		break;
+    }
+
+    printf("El valor mínimo de esta política de planificación es %d y el máximo %d\n", pmin, pmax);
+    printf("Este proceso tiene prioridad %d\n",p.sched_priority);
+ 
+	
+	return 0;
+
+}
+
+Ejercicio 3.  Ejecutar el programa anterior en una shell con prioridad 12 y política de planificación SCHED_FIFO como la del ejercicio 1. ¿Cuál es la prioridad en este caso del programa? ¿Se heredan los atributos de planificación?0
+
+ealcober@debian:/media/ealcober/2TB_2017/ING_INFORMATICA/CUARTO/ASOR/SSOO_PRACTICAS/p23$ chrt -f -p 12 18671 && ./2
+política actual de planificación del pid 19112: SCHED_FIFO
+El valor mínimo de esta política de planificación es 1 y el máximo 99
+Este proceso tiene prioridad 12
+
+-Si, se heredan los atributos de planificación.
+
+
+Grupos de procesos y sesiones. Recursos de un proceso.
+Los grupos de procesos y sesiones simplifican la gestión que realiza la shell, ya que permite enviar de forma efectiva señales a un grupo de procesos (suspender, reanudar, terminar…). En esta sección veremos esta relación y estudiaremos el interfaz del sistema para controlarla.
+Ejercicio 1. El comando ps es de especial importancia para ver los procesos del sistema y su estado. Estudiar la página de manual:
+* Mostrar todos los procesos del usuario actual en formato extendido.
+
+ealcober@debian:/media/ealcober/2TB_2017/ING_INFORMATICA/CUARTO/ASOR/SSOO_PRACTICAS/p23$ ps axjf -u ealcober -U ealcober 
+
+
+* Mostrar los procesos del sistema, incluyendo el identificador del proceso, del grupo, la sesión, el estado y la línea de comandos.
+
+ealcober@debian:/media/ealcober/2TB_2017/ING_INFORMATICA/CUARTO/ASOR/SSOO_PRACTICAS/p23$ ps -eo pid,pgid,sid,stat,comm | more
+  PID  PGID   SID STAT COMMAND
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+notas sesion:
+El proceso de login crea una sesión
+Todos los procesos y grupos del usuario pertenecen a esa sesión
+En la desconexión
+
+* Observar el identificador de proceso, grupo y sesión de los procesos. ¿Qué identificadores comparten la shell y los programas que se ejecutan en ella? ¿Cuál es el identificador de grupo de procesos cuando se crea un nuevo proceso?
+
+ealcober@debian:/media/ealcober/2TB_2017/ING_INFORMATICA/CUARTO/ASOR/SSOO_PRACTICAS/p23$ sleep 550 &
+[2] 19691
+ealcober@debian:/media/ealcober/2TB_2017/ING_INFORMATICA/CUARTO/ASOR/SSOO_PRACTICAS/p23$ ps -eo pid,pgid,sid,stat,comm | grep bash && ps -eo pid,pgid,sid,stat,comm | grep sleep
+  PID  PGID   SID STAT COMMAND
+6023  1311  1311 S<+  bash
+18671 18671 18671 Ss+  bash
+19373 19373 19373 Ss   bash
+19691 19691 19373 S    sleep
+19702 19702 19373 S    sleep
+
+
+
+¿Qué identificadores comparten la shell y los programas que se ejecutan en ella? 
+la sesión
+¿Cuál es el identificador de grupo de procesos cuando se crea un nuevo proceso?
+El id de la sesión y se hacen lideres del grupo de planificación
+
+Ejercicio 2. Escribir un programa que muestre los identificadores de un proceso: identificador de proceso, de proceso padre, de grupo de procesos y de sesión. Mostrar además el número de archivos que puede abrir el proceso y el directorio de trabajo actual.
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+
+
+int main(int argc, char* argv[]){
+
+    struct rlimit rlim;
+    int limit = getrlimit(RLIMIT_NOFILE, &rlim);
+    char dir[35]="";
+    if(getcwd(dir, 35)==NULL) return 1; 
+
+    int pid = getpid();
+    int ppid = getppid();
+    int pgid = getpgid(0);
+    int sid = getsid(0);
+
+
+    printf("límite actual de ficheros que puede abrir este proceso:%li\n",rlim.rlim_cur); /* Límite actual */
+    printf("límite máximo de ficheros que puede abrir este proceso:%li\n",rlim.rlim_max); /* Límite máximo */
+    printf("El directorio de trabajo del proceso es: %s\n",dir);
+    printf("El pid de este proceo es: %d\n",pid);
+    printf("El pid del padre de este proceo es: %d\n",ppid);
+    printf("El pid del grupo de este proceo es: %d\n",pgid);
+    printf("La sesión a la que pertenece este proceso es: %d\n",sid);
+
+
+
+    return 0;
+}
+
+
+
+Ejercicio 3. Normalmente un demonio está en su propia sesión y grupo. Para garantizar que es posible crear la sesión y grupo, el proceso hace un fork() en el que ejecuta la lógica del demonio y crea la nueva sesión. Escribir una plantilla de demonio (fork y la creación de una nueva sesión) en el que únicamente se muestren los atributos de los procesos (como en el ejercicio anterior). Además un demonio tiene un directorio de trabajo definido, fijar el de nuestra plantilla al /tmp.
+
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+
+int main(int argc, char* argv[]){
+
+
+    int ppid;
+    int pgid;
+    int sid;
+
+    char path[6]="/tmp/\0";
+
+    int pid = fork();
+
+    switch(pid){
+        case 0: // ejecutando el hijo
+            printf("rama hijo\n");
+            sleep(5);
+            ppid = getppid();
+            pgid = getpgid(0);
+            sid = getsid(0);
+            setsid();
+            if (chdir(path) != 0) return 1;
+            printf("Directorio de trabajo del demonio: %s\n", path);
+            
+            printf("El pid de este proceso es: %d\n",pid);
+            printf("El pid del padre de este proceo es: %d\n",ppid);
+            printf("El pid del grupo de este proceo es: %d\n",pgid);
+            printf("La sesión a la que pertenece este proceso es: %d\n",sid);
+            break;
+        case -1:
+            //return 1;
+            break;
+        default: // ejecutando el padre, pid = pid del hijo
+        //  wait(&pid);
+            printf("rama pater\n");
+            ppid = getppid();
+            pgid = getpgid(0);
+            sid = getsid(0);
+            
+            printf("El pid de este proceso es: %d\n",pid);
+            printf("El pid del padre de este proceo es: %d\n",ppid);
+            printf("El pid del grupo de este proceo es: %d\n",pgid);
+            printf("La sesión a la que pertenece este proceso es: %d\n",sid);
+            break;
+
+    }
+
+    return 0;
+
+}
+
+
+¿Qué sucede si el proceso padre termina antes de que el hijo imprima su información (observar el PID del proceso padre)? 
+
+que el hijo queda ejecutańdose "adoptado" por el proceso init
+
+¿Y si el proceso que termina antes es el hijo (observar con ps el estado del proceso hijo)?
+
+que el arbol de procesos se cierra de forma natural en orden inverso al que se ha creado
+
+Nota: Usar sleep() o pause() para forzar el orden de finalización deseado.
+Ejecución de programas
+Ejercicio 1. Las funciones principales para la ejecución de programas son system() y la familia de llamadas exec(). Escribir dos programas, uno con system() y otro con la llamada exec() adecuada, que ejecute un programa que se pasará como argumento por línea de comandos. En cada caso, después de la ejecución añadir una sentencia para imprimir la cadena “El comando terminó de ejecutarse” y comprobar el resultado ¿Por qué no se imprime la cadena en los dos programas? 
+Nota: Considerar cómo deben pasarse los argumentos en cada caso para que sea sencilla la implementación. Ejemplo: ¿Qué diferencia hay entre ejecuta ps -el y ejecuta “ps -el”?
+
+
+
+Ejercicio 2. Usando la versión exec del ejercicio anterior, y la plantilla de demonio desarrollada en la sección anterior, escribir un programa que ejecute cualquier programa como si fuera un demonio. Además, redirigir los flujos estándar asociados al terminal usando dup2:
+* La salida estándar al fichero /tmp/daemon.out.
+* La salida de error estándar al fichero /tmp/daemon.err.
+* La entrada estándar a /dev/null.
+Comprobar que el proceso sigue en ejecución tras cerrar la shell.
+
+
+
+Señales
+Ejercicio 1. El comando kill permite enviar señales a un proceso, grupo de procesos por su identificador (la variante pkill permite hacerlo por nombre de proceso). Estudiar la página de manual del comando y las señales que se pueden enviar a un proceso.
+
+kill [options] <pid> [...]
+
+-<signal>
+       -s <signal>
+       --signal <signal>
+              Specify the signal to be sent.
+
+usuario_vms@pto0503:~/ealcober/p23$ kill -L
+ 1) SIGHUP   2) SIGINT   3) SIGQUIT  4) SIGILL   5) SIGTRAP
+ 6) SIGABRT  7) SIGBUS   8) SIGFPE   9) SIGKILL 10) SIGUSR1
+11) SIGSEGV 12) SIGUSR2 13) SIGPIPE 14) SIGALRM 15) SIGTERM
+16) SIGSTKFLT   17) SIGCHLD 18) SIGCONT 19) SIGSTOP 20) SIGTSTP
+21) SIGTTIN 22) SIGTTOU 23) SIGURG  24) SIGXCPU 25) SIGXFSZ
+26) SIGVTALRM   27) SIGPROF 28) SIGWINCH    29) SIGIO   30) SIGPWR
+31) SIGSYS  34) SIGRTMIN    35) SIGRTMIN+1  36) SIGRTMIN+2  37) SIGRTMIN+3
+38) SIGRTMIN+4  39) SIGRTMIN+5  40) SIGRTMIN+6  41) SIGRTMIN+7  42) SIGRTMIN+8
+43) SIGRTMIN+9  44) SIGRTMIN+10 45) SIGRTMIN+11 46) SIGRTMIN+12 47) SIGRTMIN+13
+48) SIGRTMIN+14 49) SIGRTMIN+15 50) SIGRTMAX-14 51) SIGRTMAX-13 52) SIGRTMAX-12
+53) SIGRTMAX-11 54) SIGRTMAX-10 55) SIGRTMAX-9  56) SIGRTMAX-8  57) SIGRTMAX-7
+58) SIGRTMAX-6  59) SIGRTMAX-5  60) SIGRTMAX-4  61) SIGRTMAX-3  62) SIGRTMAX-2
+63) SIGRTMAX-1  64) SIGRTMAX    
+
+
+Ejercicio 2. En un terminal, arrancar un proceso de larga duración (ej. sleep 600). En otra terminal, enviar diferentes señales al proceso, comprobar el comportamiento. Observar el código de salida de sleep. ¿Qué relación hay con la señal enviada?
+
+usuario_vms@pto0503:~$ kill -11 14315
+usuario_vms@pto0503:~$ ps -e | grep sleep
+14380 pts/0    00:00:00 sleep
+usuario_vms@pto0503:~$ kill -54 14380
+usuario_vms@pto0503:~$ ps -e | grep sleep
+14385 pts/0    00:00:00 sleep
+
+
+usuario_vms@pto0503:~/ealcober/p23$ sleep 600
+Violación de segmento (`core' generado)
+usuario_vms@pto0503:~/ealcober/p23$ sleep 600
+Señal de tiempo real 20
+usuario_vms@pto0503:~/ealcober/p23$ sleep 600
+^[[A^C
+usuario_vms@pto0503:~/ealcober/p23$ sleep 600
+Abandona (`core' generado)
+
+
+Ejercicio 3. Escribir un programa que bloquee las señales SIGINT y SIGTSTP. Después de bloquearlas el programa debe suspender su ejecución con la llamada sleep() un número de segundos que se obtendrán de la variable de entorno SLEEP_SECS. 
+Después de despertar de la llamada sleep(), el proceso debe informar de si se recibió la señal SIGINT y/o SIGTSTP. En este último caso, debe desbloquearla con lo que el proceso se detendrá y podrá ser reanudado en la shell (imprimir una cadena antes de finalizar el programa para comprobar este comportamiento).
+
+
+
+Ejercicio 4. Escribir un programa que instale un manejador sencillo para las señales SIGINT y SIGTSTP. El manejador debe contar las veces que ha recibido cada señal. El programa principal permanecerá en un bucle que se detendrá cuando se hayan recibido 10 señales. El número de señales de cada tipo se mostrará al finalizar el programa. 
+
+● Las señales son interrupciones software, que informan a un proceso de la
+ocurrencia de un evento de forma asíncrona
+● Las señales las genera un proceso, incluido el núcleo del sistema
+● Las opciones en la ocurrencia de un evento son:
+    ○ Bloquear la señal
+    ○ Ignorar la señal
+    ○ Invocar a una rutina de tratamiento por defecto, que en general termina con la
+    ejecución del proceso
+    ○ Invocar a una rutina de tratamiento propia
+● Tipos de señales:
+    ○ Terminación de procesos
+    ○ Excepciones
+    ○ Llamada de sistema
+    ○ Generadas por proceso
+    ○ Interacción con el terminal
+    ○ Traza de proceso
+    ○ Fuertemente dependientes del sistema (consultar signal.h)
+
+●Enviar una señal a un proceso:
+int kill(pid_t pid, int signal);
+SV+BSD+POSIX - <signal.h>
+pid: Identifica el proceso que recibirá la señal:
+    ■ >0: Es el identificador del proceso
+    ■ 0: Se envía a todos los procesos del grupo
+    ■ -1: Se envía a todos los procesos (de mayor a menor), excepto a init
+    ■ <-1: Se envía a todos los procesos del grupo con PGID igual a -pid
+    signal: La señal que se enviará (si es 0, se simula el envío)
+
+Ejercicio 5. Escribir un programa que realice el borrado programado del propio ejecutable. El programa tendrá como argumento el número de segundos que esperará antes de borrar el fichero. El borrado del fichero se podrá detener si se recibe la señal SIGUSR1.
+Nota: El programa principal no se puede suspender usando la función sleep(). Usar las funciones del sistema para borrar el fichero.
+
+
+________________
+
+
+Ampliación de Sistemas Operativos y Redes
