@@ -1,14 +1,114 @@
-Ejercicio 1. Consultar las páginas de manual para ​ nc y ​ netstat​ . Probar algunas de las opciones para
-ambos programas para familiarizarse con su comportamiento.
+set-up
+------
+
+[root@MV1 ~]# ip l set dev eth0 up
+[root@MV1 ~]# ip a add 192.168.0.1/24 dev eth0
+[root@MV1 ~]# ip r add default via 192.168.0.3
+
+[root@MV2 ~]# ip l set dev eth0 up
+[root@MV2 ~]# ip a add 192.168.0.2/24 dev eth0
+[root@MV2 ~]# ip r add default via 192.168.0.3
+
+[root@MV3 ~]# ip l set dev eth0 up
+[root@MV3 ~]# ip l set dev eth1 up
+[root@MV3 ~]# ip a add 192.168.0.3/24 dev eth0
+[root@MV3 ~]# ip a add 172.16.0.3/24 dev eth1
+[root@MV3 ~]# sysctl net.ipv4.ip_forward=1
+net.ipv4.ip_forward = 1
+
+[root@MV4 ~]# ip l set dev eth0 up
+[root@MV4 ~]# ip a add 172.16.0.1/24 dev eth0
+[root@MV4 ~]# ip r add default via 172.16.0.3
+
+comprobar conectividad
+----------------------
+
+[root@MV1 ~]# ping 192.168.0.2
+PING 192.168.0.2 (192.168.0.2) 56(84) bytes of data.
+64 bytes from 192.168.0.2: icmp_seq=1 ttl=64 time=0.192 ms
+64 bytes from 192.168.0.2: icmp_seq=2 ttl=64 time=0.243 ms
+^C
+--- 192.168.0.2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 999ms
+rtt min/avg/max/mdev = 0.192/0.217/0.243/0.029 ms
+[root@MV1 ~]# ping 172.16.0.1
+PING 172.16.0.1 (172.16.0.1) 56(84) bytes of data.
+64 bytes from 172.16.0.1: icmp_seq=1 ttl=63 time=0.603 ms
+64 bytes from 172.16.0.1: icmp_seq=2 ttl=63 time=0.442 ms
+^C
+--- 172.16.0.1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1000ms
+rtt min/avg/max/mdev = 0.442/0.522/0.603/0.083 ms
+
+
+Ejercicio 1. Consultar las páginas de manual para ​ nc y ​ netstat​ . En particular, consultar las siguientes
+opciones de ​ netstat​ : ​ -a​ , ​ -l​ , ​ -n​ , ​ -t y ​ -o​ . Probar algunas de las opciones para ambos programas para
+familiarizarse con su comportamiento.
+
+-l, --listening
+       Show only listening sockets.  (These are omitted by default.)
+
+-a, --all
+    Show  both  listening and non-listening sockets.  With the --interfaces
+    option, show interfaces that are not up
+
+-o, --timers
+      Include information related to networking timers.
+
+--numeric, -n
+    Show numerical addresses instead of trying to determine symbolic  host,
+    port or user names.
+
+[--tcp|-t]  [--udp|-u]
 
 -l <listen mode>
 CLIENT: nc [-options] hostname port[s] [ports] ...
 SERVER: nc -l -p port [-options] [hostname] [port]
 
+
+[root@MV1 ~]# nc  192.168.0.2 5555
+asdf
+asdf
+234
+
+[root@MV2 ~]# nc -l -p 5555
+asdf
+asdf
+234
+
+CUIDADO NO USAR PUERTOS RESERVADOS... <1024, consultar /etc/services
+
 Ejercicio 2. (LISTEN) Abrir un servidor TCP en el puerto 7777 en VM1 usando el comando ​ nc​ . Comprobar
 el estado de la conexión en el servidor con el comando ​ netstat​ .
+
+[root@MV1 ~]# nc -p 7777 -l
+asfd    
+asdf
+hola que tal qué dices
+nada todo bien qué hacemos
+
+[root@MV1 ~]# netstat | grep cbt
+tcp        0      0 localhost.localdoma:cbt 192.168.0.2:44246       ESTABLISHED
+
+[root@MV2 ~]# nc  192.168.0.1 7777
+asfd
+asdf
+hola que tal qué dices
+nada todo bien qué hacemos
+
+
+
+
 Ejercicio 3. (ESTABLISHED) En VM2, iniciar una conexión cliente al servidor arrancado en el ejercicio
-anterior.
+anterior usando el comando ​ nc 192.168.0.1 7777​ .
+● Comprobar el estado de la conexión e identificar los parámetros (dirección IP y puerto) usando
+el comando ​ netstat -ltn​ .
+● Reiniciar el servidor en VM1 usando el comando ​ nc -l 192.168.0.1 7777​ . Comprobar que no
+es posible la conexión desde VM1 usando como dirección destino ​ localhost​ . Observar la
+diferencia con el comando anterior (sin la dirección IP) usando ​ netstat​ .
+● Iniciar el servidor e intercambiar un único carácter con el cliente. Con ayuda de ​ wireshark​ ,
+observar los mensajes intercambiados (especialmente los números de secuencia, confirmación y
+flags TCP) y determinar cuántos bytes (y número de mensajes) han sido necesarios.
 
 nc -l -p 7777
 nc 192.168.0.1 7777
@@ -20,18 +120,16 @@ tcp    LISTEN     0      10      *:cbt                   *:*
 tcp    LISTEN     0      10     :::cbt                  :::*        
 
 [cursoredes@localhost ~]$ cat /etc/services | grep cbt
+tambien se puede hacer $ netstat  --numeric-ports | grep 7777
 cbt             7777/tcp                # cbt
 cbt             7777/udp                # cbt
 
 sysctl net.ipv4.ip_forward=1
 
-Ejercicio 3. (ESTABLISHED) En VM2, iniciar una conexión cliente al servidor arrancado en el ejercicio
-anterior.
-
-***Comprobar el estado de la conexión e identificar los parámetros (dirección IP y puerto) usando
-el comando ​ netstat​ .
 
 [cursoredes@localhost ~]$ ss -l | grep cbt
+mejor incluso $ ss -lna | grep 7777
+
 tcp    LISTEN     0      10      *:cbt                   *:*                    
 tcp    LISTEN     0      10     :::cbt                  :::*        
 
@@ -45,11 +143,6 @@ tcp        0      0 localhost.localdoma:cbt 192.168.0.2:41722       ESTABLISHED
 [cursoredes@localhost ~]$ ss | grep cbt
 tcp    ESTAB      0      0      192.168.0.1:cbt                192.168.0.2:41722   
 
-***Reiniciar el servidor en VM1 usando la opción ​ -s 192.168.0.1​ . Comprobar si es posible la
-conexión desde VM1 usando como dirección destino ​ localhost​ . Observar la diferencia con el
-comando anterior (sin opción ​ -s​ ) usando ​ netstat​ .
-
-NO ME DEJA HACERLO CON -s
 
 ***Iniciar el servidor e intercambiar un único carácter con el cliente. Con ayuda de ​ wireshark​ ,
 observar los mensajes intercambiados (especialmente los números de secuencia, confirmación y
@@ -70,14 +163,21 @@ tcp6       0      0 localhost:43250         localhost:cbt           TIME_WAIT   
 DATA=61:0a
 
 
-Ejercicio 5. ( ​ SYN-SENT y SYN-RCVD) El comando ​ iptables permite filtrar paquetes según los flags TCP del segmento (opción ​ --tcp-flags​ ):
+Ejercicio 5. ( ​ SYN-SENT y SYN-RCVD) El comando ​ iptables permite filtrar paquetes según los flags TCP
+del segmento con la opción ​ --tcp-flags​ (consultar la página de manual ​ iptables-extensions​ ):
+● Fijar una regla en el servidor (VM1) que bloquee un mensaje del acuerdo TCP de forma que el
+cliente (VM2) se quede en el estado SYN-SENT. Comprobar el resultado con el comando ​ netstat
+en el cliente.
 
-● Fijar una regla que permita filtrar las conexiones en el servidor (VM1) de forma que deje al
-cliente en el estado SYN-SENT. Comprobar el resultado con el comando ​ netstat en el cliente
-(VM2).
 
 REGLA EN MÁQUINA 1 :
 	iptables -A OUTPUT -d 192.168.0.2 -p tcp --tcp-flags ALL SYN,ACK -j DROP
+  ó
+  iptables -A INPUT -p tcp --tcp-flags ALL SYN -s 192.168.0.2 -j DROP
+
+[cursoredes@localhost ~]$ netstat -o | grep cb
+tcp        0      1 localhost.localdo:48190 192.168.0.1:cbt         SYN_SENT    on (0.35/2/0)
+
 
 RESULT EN MAQUINA 2:
 
@@ -87,9 +187,22 @@ tcp        0      1 localhost.localdo:41744 192.168.0.1:cbt         SYN_SENT    
 target     prot opt source               destination         
 DROP       tcp  --  anywhere             192.168.0.2          tcp flags:FIN,SYN,RST,PSH,ACK,URG/SYN,ACK
 
-Fijar una regla que permita filtrar las conexiones en el cliente (VM2) de forma que deje al
-servidor en el estado SYN-RCVD. Además esta regla debe dejar al servidor también en el estado
-LAST-ACK después de cerrar la conexión (con Ctrl+C) en el cliente.
+● Borrar la regla anterior y fijar otra en el cliente que bloquee un mensaje del acuerdo TCP de
+forma que el servidor se quede en el estado SYN-RCVD. Además, esta regla debe dejar al
+servidor también en el estado LAST-ACK después de cerrar la conexión (con Ctrl+C) en el cliente.
+
+
+[root@servidorMV1 ~]# netstat -anlo | grep 7777
+tcp        0      0 0.0.0.0:7777            0.0.0.0:*               LISTEN      keepalive (0.19/0/0)
+tcp        0      0 192.168.0.1:7777        192.168.0.2:34462       SYN_RECV    on (18.79/5/0)
+
+
+● Con ayuda de ​ netstat (usando la opción ​ -o​ ) determinar cuántas retransmisiones se realizan y
+con qué frecuencia
+
+
+
+Hasta la 4 cada 15 segundo,s la 5 cada 30 y ya acaba
 
 
 regla en cliente
@@ -111,13 +224,19 @@ flag ​ SYN.
 mensaje RST que liberaría los recursos, bloquearemos los mensajes SYN+ACK en el atacante con
 iptables​ .
 
-[root@localhost ~]# iptables -A OUTPUT -p tcp --tcp-flags ALL SYN,ACK -j DROP
+iptables -A INPUT -p tcp --tcp-flags ALL SYN,ACK -s 192.168.0.1 -j DROP
+
 
 ● (Cliente VM2) Para enviar paquetes TCP con los datos de interés usaremos el comando ​ hping3
-(estudiar la página de manual). En este caso, enviaremos mensajes SYN al puerto 23 del servidor
-(​ telnet​ ) lo más rápido posible (​ flood ​ ).
+(estudiar la página de manual). En este caso, enviar mensajes SYN al puerto 22 del servidor (​ ssh​ )
+lo más rápido posible (​ flood ​ ).
+
+hping3 --flood  -S --rand-source -p 22 192.168.0.1
+
+
 ● (Servidor VM1) Estudiar el comportamiento de la máquina, en términos del número de paquetes
 recibidos. Comprobar si es posible la conexión al servicio ​ ssh​ (22).
+
 ● (Servidor VM1) Activar la defensa SYN ​ cookies en el servidor con el comando ​ sysctl (parámetro
 net.ipv4.tcp_syncookies​ ). Comprobar si es posible la conexión al servicio ​ ssh​ (22).
 
@@ -125,9 +244,9 @@ net.ipv4.tcp_syncookies​ ). Comprobar si es posible la conexión al servicio �
 
 al estar el puerto cerrado devuelve RST
 
-si lo hago al p 23, no permite la conexión de otra máquina ya que llena la cola de conexiones en estado SYN_RCVD.
+si lo hago al p 23, no permite la conexión de otra máquina ya que llena la cola de conexiones en estado SYN_RCVD. 
 
-Al activar el net.ipv4.tcp_syncookies​ el problema se soluciona volviendo a permitir las onexiones
+Al activar el net.ipv4.tcp_syncookies​ el problema se soluciona volviendo a permitir las conexiones.
 
 Ejercicio 2. ​ (Técnica CONNECT) Netcat permite explorar puertos usando la técnica CONNECT que
 intenta establecer una conexión a un puerto determinado. En función de la respuesta (SYN+ACK o RST),
@@ -248,8 +367,11 @@ Ejercicio 2. ​ Acceso a un servidor en la red privada:
 ● (VM1) Arrancar el servidor con ​ nc​ en el puerto 7777.
 ● (VM3 - Router) Usando el comando ​ iptables reenviar las conexiones al puerto 80 de Router al
 puerto 7777 de VM1.
-● (VM4) Conectarse al puerto 80 de Router con ​ nc y comprobar el resultado en VM1. Analizar el
-tráfico intercambiado con ​ wireshark​ , especialmente los puertos y direcciones IP origen y
+
+[root@localhost ~]# iptables -t nat -A PREROUTING -d 172.16.0.3 -p tcp --dport 80 -j DNAT --to 192.168.0.1:7777
+
+
+● (VM4) Conectarse al puerto 80 de Router con ​ nc y comprobar el resultado en VM1. Analizar el tráfico intercambiado con ​ wireshark​ , especialmente los puertos y direcciones IP origen y
 destino en ambas redes.
 
 [root@localhost ~]# iptables -t nat -A PREROUTING -d 172.16.0.3 -p tcp --dport 80 -j DNAT --to 192.168.0.1:7777
