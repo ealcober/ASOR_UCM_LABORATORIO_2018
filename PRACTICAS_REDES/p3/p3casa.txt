@@ -408,9 +408,176 @@ Ejercicio 4 . ​ Configurar la máquina virtual cliente para que use el nuevo s
 Ejercicio 5 . ​ Usar el comando ​ dig para obtener la información del dominio ​ labfdi.es ofrecida por el
 servidor.
 
+todas las respuestas seguidas aquí:
+
+contenido named.conf servidor, VM1:
+options {
+	listen-on port 53 { any; };
+        listen-on-v6 port 53 { any; };
+        directory	"/var/named";
+        dump-file	"/var/named/data/cache_dump.db";
+        statistics-file "/var/named/data/named_stats.txt";
+        memstatistics-file "/var/named/data/named_mem_stats.txt";
+        allow-query     { any; }; <---------- AÑADIDA
+
+		recursion no; <---------- AÑADIDA
+
+        dnssec-enable yes;
+        dnssec-validation yes;
+
+        /* Path to ISC DLV key */
+        bindkeys-file "/etc/named.iscdlv.key";
+
+        managed-keys-directory "/var/named/dynamic";
+
+        pid-file "/run/named/named.pid";
+        session-keyfile "/run/named/session.key";
+};
+
+logging {
+	channel default_debug {
+                file "data/named.run";
+                severity dynamic;
+        };
+};
+
+zone "." IN {
+	type hint;
+        file "named.ca";
+};
+
+zone "labfdi.es." { <---------- AÑADIDA
+        type master;
+        file "db.labfdi.es";
+};
+
+include "/etc/named.rfc1912.zones";
+include "/etc/named.root.key";
+
+
+File: /var/named/db.labfdi.es                                                                                     
+
+$TTL 2d
+$ORIGIN labfdi.es
+
+labfdi.es.   IN   SOA   ns.labfdi.es.   contact.labfdi.es.  (
+                2003080800 ; #serial number
+                3h         ; #refresh
+                15M        ; #update retry
+                3W12H	   ; #expiry
+                2h20M	   ; #nx ttl
+                )
+
+                IN	NS	ns
+ns	IN	A	192.168.0.1
+www     IN	A	192.168.0.200
+www     IN	AAAA            fd00::1
+mail    IN	MX	10	mail
+mail    IN	A	192.168.0.250
+servidor 86400  IN	CNAME   mail.labfdi.es.
+
+resultado consulta en vm2
+
+[root@localhost ~]# host -v labfdi.es
+Trying "labfdi.es"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 56635
+;; flags: qr aa rd; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;labfdi.es.			IN	A
+
+;; AUTHORITY SECTION:
+labfdi.es.		8400	IN	SOA	ns.labfdi.es. contact.labfdi.es. 2003080800 10800 900 1857600 8400
+
+Received 74 bytes from 192.168.0.1#53 in 0 ms
+Trying "labfdi.es"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 40960
+;; flags: qr aa rd; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;labfdi.es.			IN	AAAA
+
+;; AUTHORITY SECTION:
+labfdi.es.		8400	IN	SOA	ns.labfdi.es. contact.labfdi.es. 2003080800 10800 900 1857600 8400
+
+Received 74 bytes from 192.168.0.1#53 in 0 ms
+Trying "labfdi.es"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 28429
+;; flags: qr aa rd; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;labfdi.es.			IN	MX
+
+;; AUTHORITY SECTION:
+labfdi.es.		8400	IN	SOA	ns.labfdi.es. contact.labfdi.es. 2003080800 10800 900 1857600 8400
+
+Received 74 bytes from 192.168.0.1#53 in 0 ms
+
+[root@localhost ~]# host -a www.labfdi.es
+Trying "www.labfdi.es"
+Received 78 bytes from 192.168.0.1#53 in 0 ms
+Trying "www.labfdi.es.labfdi.es"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 42922
+;; flags: qr aa rd; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 1
+
+;; QUESTION SECTION:
+;www.labfdi.es.labfdi.es.	IN	ANY
+
+;; ANSWER SECTION:
+www.labfdi.es.labfdi.es. 172800	IN	A	192.168.0.200
+www.labfdi.es.labfdi.es. 172800	IN	AAAA	fd00::1
+
+;; AUTHORITY SECTION:
+labfdi.es.		172800	IN	NS	ns.labfdi.es.labfdi.es.
+
+;; ADDITIONAL SECTION:
+ns.labfdi.es.labfdi.es.	172800	IN	A	192.168.0.1
+
+Received 118 bytes from 192.168.0.1#53 in 0 ms
+
+
+[root@localhost ~]# dig -t SOA labfdi.es
+
+; <<>> DiG 9.9.4-RedHat-9.9.4-61.el7_5.1 <<>> -t SOA labfdi.es
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 43534
+;; flags: qr aa rd; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 2
+;; WARNING: recursion requested but not available
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;labfdi.es.			IN	SOA
+
+;; ANSWER SECTION:
+labfdi.es.		172800	IN	SOA	ns.labfdi.es. contact.labfdi.es. 2003080800 10800 900 1857600 8400
+
+;; AUTHORITY SECTION:
+labfdi.es.		172800	IN	NS	ns.labfdi.es.labfdi.es.
+
+;; ADDITIONAL SECTION:
+ns.labfdi.es.labfdi.es.	172800	IN	A	192.168.0.1
+
+;; Query time: 0 msec
+;; SERVER: 192.168.0.1#53(192.168.0.1)
+;; WHEN: Wed Dec 26 20:07:25 CET 2018
+;; MSG SIZE  rcvd: 128
+
+
 Ejercicio 6 . ​ ​ Repetir alguna de las consultas anteriores y, con la ayuda de ​ wireshark​ :
 ● Comprobar el protocolo y puerto usado por el cliente y servidor DNS
 ● Estudiar el formato (campos incluidos y longitud) de los mensajes correspondientes a las preguntas y respuestas DNS.
+
+query
+Ethernet II, Src: 02:00:00:00:02:00 (02:00:00:00:02:00), Dst: 02:00:00:00:01:00 (02:00:00:00:01:00)
+Internet Protocol Version 4, Src: 192.168.0.100 (192.168.0.100), Dst: 192.168.0.1 (192.168.0.1)
+User Datagram Protocol, Src Port: 40983 (40983), Dst Port: domain (53)
+
+response
+Ethernet II, Src: 02:00:00:00:01:00 (02:00:00:00:01:00), Dst: 02:00:00:00:02:00 (02:00:00:00:02:00)
+Internet Protocol Version 4, Src: 192.168.0.1 (192.168.0.1), Dst: 192.168.0.100 (192.168.0.100)
+User Datagram Protocol, Src Port: domain (53), Dst Port: 40983 (40983)
 
 Zona inversa (​ reverse ) 
 
