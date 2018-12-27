@@ -13,7 +13,8 @@ Ejercicio 1 [VM1,VM2]. Activar el interfaz ​ eth0 en VM1 y VM2 y comprobar las
 enlace local que tienen asignadas. La consulta de las direcciones del interfaz debe realizarse con el comando ​ ip​ (ip a)
 
 MV1 - inet6 fe80::ff:fe00:100/64 scope link
-MV2 - inet6 fe80::ff:fe00:100/64 scope link
+MV2 - inet6 fe80::ff:fe00:200/64 scope link 
+
 
 Ejercicio 2 [VM1,VM2]. Comprobar la conectividad entre VM1 y VM2 con la orden ​ ping6​ . Cuando se
 usan direcciones de enlace local, ​ y sólo en ese caso​ , es necesario especificar el interfaz origen, añadiendo ​ %<nombre_interfaz> a la dirección. Consultar las opciones del comando ​ ping6 en la página de manual.
@@ -47,7 +48,8 @@ eth : Destino: 02:00:00:00:01:00 Origen: 02:00:00:00:02:00
 ipv6: Origen: fe80::ff:fe00:200 Destino: fe80::ff:fe00:100
 icmpv6: Type: 135 Neighbor solicitation Code: 0 TargetAddress: fe80::ff:fe00:100
 
-Me extraña en wireshark que el paquete Neighbor solicitation no va dirigido a broadcast sino directamente a la ip destino de ipv6-link-scope a igual. de mac a mac. ¿Es para confirmar, tras el ping? ¿Antes del ping en la autoconfiguración, si que va a broadcast?
+Me extraña en wireshark que el paquete Neighbor solicitation no va dirigido a broadcast sino directamente a la ip destino de ipv6-link-scope a igual. de mac a mac. Es para confirmar, tras el ping.
+Antes del ping en la autoconfiguración, si que va a broadcast.
 
 
 +++++++++++++++++++++++++++++++++++ Direcciones IPv6: ULA +++++++++++++++++++++++++++++++++++
@@ -72,79 +74,220 @@ MV2:
 
 Ejercicio 2 [VM1,VM2]. Comprobar la conectividad entre VM1 y VM2 con la orden ​ ping6 usando la
 nueva dirección. Observar el contenido de las tramas intercambiadas con ​ wireshark​ .
+
+ok.
+
 Ejercicio 3 [Router,VM4]. Activar el interfaz ​ eth0 de VM4 y los dos interfaces de Router.
 Comprobar la conectividad entre Router y VM1, y entre Router y VM4 usando la dirección de enlace
 local. ​ Nota​ : Recordar la necesidad en este caso de especificar el interfaz origen.
 
-mv1
+[root@localhost ~]# ping6 -c 1 fe80::ff:fe00:400%eth1
+PING fe80::ff:fe00:400%eth1(fe80::ff:fe00:400%eth1) 56 data bytes
+64 bytes from fe80::ff:fe00:400%eth1: icmp_seq=1 ttl=64 time=0.392 ms
 
-[root@localhost ~]# ip a
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
-       valid_lft forever preferred_lft forever
-2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
-    link/ether 02:00:00:00:01:00 brd ff:ff:ff:ff:ff:ff
-    inet6 fc01::a:0:0:ff:100/64 scope global 
-       valid_lft forever preferred_lft forever
-    inet6 fe80::ff:fe00:100/64 scope link 
-       valid_lft forever preferred_lft forever
+--- fe80::ff:fe00:400%eth1 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.392/0.392/0.392/0.000 ms
 
-mv2
+[root@localhost ~]# ping6 -c 1 fe80::ff:fe00:100%eth0
+PING fe80::ff:fe00:100%eth0(fe80::ff:fe00:100%eth0) 56 data bytes
+64 bytes from fe80::ff:fe00:100%eth0: icmp_seq=1 ttl=64 time=0.233 ms
 
-[root@localhost ~]# ip a
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
-       valid_lft forever preferred_lft forever
-2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
-    link/ether 02:00:00:00:02:00 brd ff:ff:ff:ff:ff:ff
-    inet6 fc01::a:0:0:ff:200/64 scope global 
-       valid_lft forever preferred_lft forever
-    inet6 fe80::ff:fe00:200/64 scope link 
-       valid_lft forever preferred_lft forever
+--- fe80::ff:fe00:100%eth0 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.233/0.233/0.233/0.000 ms
 
-mv3
+Ejercicio 4 [Router,VM4]. Configurar direcciones ULA en los dos interfaces de Router (redes fd00:0:0:a::/64 y fd00:0:0:b::/64) y en el de VM4 (red fd00:0:0:b::/64). Elegir el identificador de interfaz de forma que no coincida dentro de la misma red. 
 
-[root@localhost ~]# ip a
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
-       valid_lft forever preferred_lft forever
-2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
-    link/ether 02:00:00:00:03:00 brd ff:ff:ff:ff:ff:ff
-    inet6 fc01:0:0:a::300/64 scope global 
-       valid_lft forever preferred_lft forever
-    inet6 fe80::ff:fe00:300/64 scope link 
-       valid_lft forever preferred_lft forever
-3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
-    link/ether 02:00:00:00:03:01 brd ff:ff:ff:ff:ff:ff
-    inet6 fc01:0:0:b::300/64 scope global 
-       valid_lft forever preferred_lft forever
-    inet6 fe80::ff:fe00:301/64 scope link 
-       valid_lft forever preferred_lft forever
+en Router:
 
-mv4
+ip a add fd00:0:0:a::3/64 dev eth0
+ip a add fd00:0:0:b::3/64 dev eth1
 
-[root@localhost ~]# ip a
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
-       valid_lft forever preferred_lft forever
+en VM4:
+
+ip a add fd00:0:0:b::4/64 dev eth0
+
+
+Ejercicio 5. Comprobar la conectividad entre Router y VM1, y entre Router y VM4 usando direcciones ULA. Comprobar además que VM1 no puede alcanzar a VM4.
+
+ok
+
+Encaminamiento estático
+Según la topología que hemos configurado en esta práctica, Router debe encaminar el tráfico entre las redes fd00:0:0:a::/64 y fd00:0:0:b::/64. En esta sección vamos a configurar un encaminamiento estático basado en las rutas que fijaremos manualmente en todas las máquinas.
+Ejercicio 1 [VM1, Router]. Consultar las tablas de rutas en VM1 y Router con el comando ip route. Consultar la página de manual del comando para seleccionar las rutas IPv6.
+
+
+
+Ejercicio 2 [Router]. Para que Router actúe efectivamente como encaminador, hay que activar el reenvío de paquetes (packet forwarding). De forma temporal, se puede activar con el comando sysctl -w net.ipv6.conf.all.forwarding=1.
+
+sysctl -w net.ipv6.conf.all.forwarding=1
+
+Ejercicio 3 [VM1,VM2,VM4]. Finalmente, hay que configurar la tabla de rutas en las máquinas virtuales. Añadir la dirección correspondiente de Router como ruta por defecto con el comando ip route. Comprobar la conectividad entre VM1 y VM4 usando el comando ping6.
+
+vm4:
+[root@localhost ~]# ip -6 r add default via fd00:0:0:b::3 dev eth0
+vm2:
+[root@localhost ~]# ip -6 r add default via fd00:0:0:a::3 dev eth0
+vm1:
+[root@localhost ~]# ip -6 r add default via fd00:0:0:a::3 dev eth0
+
+
+Ejercicio 4 [VM1,Router,VM4]. Borrar la cache de vecinos en VM1 y Router (con ip neigh flush dev eth0). Con ayuda de la herramienta wireshark, completar la siguiente tabla al usar la orden ping6 entre VM1 y VM4 con todos los mensajes hasta el primer ICMP Echo Reply:
+Red fd00:0:0:a::/64 - VM1
+MAC Origen
+  MAC Destino
+  IPv6 Origen
+  IPv6 Destino
+  ICMPv6 Tipo
+  
+1 0.000000000 fd00:0:0:a::1 ff02::1:ff00:3  ICMPv6  86  Neighbor Solicitation for fd00:0:0:a::3 from 02:00:00:00:01:00
+
+2 0.000038093 fd00:0:0:a::3 fd00:0:0:a::1 ICMPv6  86  Neighbor Advertisement fd00:0:0:a::3 (rtr, sol, ovr) is at 02:00:00:00:03:00
+
+3 0.000050611 fe80::ff:fe00:100 ff02::1:ff00:3  ICMPv6  86  Neighbor Solicitation for fd00:0:0:a::3 from 02:00:00:00:01:00
+
+4 0.000065410 fd00:0:0:a::3 fe80::ff:fe00:100 ICMPv6  86  Neighbor Advertisement fd00:0:0:a::3 (rtr, sol, ovr) is at 02:00:00:00:03:00
+
+5 0.000070415 fe80::ff:fe00:100 ff02::1:ff00:3  ICMPv6  86  Neighbor Solicitation for fd00:0:0:a::3 from 02:00:00:00:01:00
+
+6 0.000072827 fd00:0:0:a::3 fe80::ff:fe00:100 ICMPv6  86  Neighbor Advertisement fd00:0:0:a::3 (rtr, sol, ovr) is at 02:00:00:00:03:00
+
+7 0.000227526 fd00:0:0:a::1 fd00:0:0:b::4 ICMPv6  118 Echo (ping) request id=0x2575, seq=1, hop limit=64 (reply in 8)
+
+8 0.000448859 fd00:0:0:b::4 fd00:0:0:a::1 ICMPv6  118 Echo (ping) reply id=0x2575, seq=1, hop limit=63 (request in 7)
+ 
+
+  
+
+  
+
+  Configuración persistente
+Las configuraciones realizadas en los apartados anteriores son volátiles y desaparecen cuando se reinician las máquinas. Durante el arranque del sistema se pueden configurar automáticamente determinados interfaces según la información almacenada en el disco.
+Ejercicio 1 [Router]. Crear los ficheros ifcfg-eth0 e ifcfg-eth1 en el directorio /etc/sysconfig/network-scripts/ con la configuración de cada interfaz. Usar las siguientes opciones:
+Para IPv6:
+  Para IPV4:
+  Type=Ethernet
+BOOTPROTO=static
+IPV6ADDR=<dirección IP en formato CIDR>
+IPV6_DEFAULTGW=<dirección IP del encaminador por defecto (si existe)>
+DEVICE=<nombre del interfaz (eth0...)>
+  Type=Ethernet
+BOOTPROTO=static
+IPADDR=<dirección IP en formato CIDR>
+GATEWAY=<dirección IP del encaminador por defecto (si existe)>
+DEVICE=<nombre del interfaz (eth0...)>
+  Nota: Estas opciones se describen en detalle en /usr/share/doc/initscripts-*/sysconfig.txt.
+
+  GNU nano 2.3.1  File: /etc/sysconfig/network-scripts/ifcfg-eth1            
+
+TYPE=Ethernet
+BOOTPROTO=static
+IPV6ADDR=fd00:0:0:b::3/64
+IPV6ADDR_SECONDARIES=fe80::ff:fe00:301/64
+IPV6FORWARDING=yes
+NAME=eth1
+DEVICE=eth1
+ONBOOT=yes
+
+  GNU nano 2.3.1  File: /etc/sysconfig/network-scripts/ifcfg-eth0            
+
+TYPE=Ethernet
+BOOTPROTO=static
+IPV6ADDR=fd00:0:0:a::3/64
+IPV6ADDR_SECONDARIES=fe80::ff:fe00:300/64
+IPV6FORWARDING=yes
+NAME=eth0
+DEVICE=eth0
+ONBOOT=yes
+
+
+
+
+
+Ejercicio 2 [Router]. Comprobar la configuración automática con las órdenes ifup e ifdown.
+
+ok.
+
+Autoconfiguración. Anuncio de prefijos
+El protocolo de descubrimiento de vecinos se usa también para la autoconfiguración de los interfaces de red. Cuando se activa un interfaz, se envía un mensaje de descubrimiento de encaminadores. Los encaminadores presentes responden con un anuncio que contiene, entre otros, el prefijo de la red. 
+Ejercicio 1 [VM1, VM2, VM4]. Eliminar las direcciones ULA de los interfaces (con ip addr del) y desactivarlos (con ip link set eth0 down).
+
+[root@VM1 ~]# ip a del fd00:0:0:a::1/64 dev eth0
+[root@VM2 ~]# ip a del fd00:0:0:a::2/64 dev eth0
+[root@VM4 ~]# ip a del fd00:0:0:b::4/64 dev eth0
+[root@VM1 ~]# ip l set dev eth0 down
+[root@VM2 ~]# ip l set dev eth0 down
+[root@VM4 ~]# ip l set dev eth0 down
+
+
+
+Ejercicio 2 [ Router]. Configurar el servicio zebra para que que el encaminador anuncie prefijos. Para ello, crear el archivo /etc/quagga/zebra.conf e incluir la información de los prefijos para las dos redes. Cada entrada será de la forma:
+interface eth0
+  no ipv6 nd suppress-ra
+  ipv6 nd prefix fd00:0:0:a::/64
+  Finalmente, arrancar el servicio con el comando service zebra start.
+Nota: En /usr/share/doc/quagga-0.99.22.4 hay archivos de configuración de ejemplo.
+
+Ejercicio 3 [VM4]. Comprobar la autoconfiguración del interfaz de red en VM4, activando el interfaz y consultando la dirección asignada.
+
 2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
     link/ether 02:00:00:00:04:00 brd ff:ff:ff:ff:ff:ff
-    inet6 fc01:0:0:b::4000/64 scope global 
-       valid_lft forever preferred_lft forever
+    inet6 fd00::b:0:ff:fe00:400/64 scope global mngtmpaddr dynamic 
+       valid_lft 2591959sec preferred_lft 604759sec
     inet6 fe80::ff:fe00:400/64 scope link 
        valid_lft forever preferred_lft forever
 
 
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Ejercicio 4 [VM1,VM2]. Estudiar los mensajes del protocolo de descubrimiento de vecinos:
+* Activar el interfaz en VM2, comprobar que está configurado correctamente e iniciar una captura de tráfico con wireshark.
+* Activar el interfaz en VM1 y estudiar los mensajes ICMP de tipo Router Solicitation y Router Advertisement.
+
+5 1.957157903 fe80::ff:fe00:100 ff02::2 ICMPv6  70  Router Solicitation from 02:00:00:00:01:00
+
+6 1.957397790 fe80::ff:fe00:300 ff02::1 ICMPv6  110 Router Advertisement from 02:00:00:00:03:00
+
+* Comprobar las direcciones destino y origen de los datagramas, así como las direcciones destino y origen de la trama Ethernet. Especialmente la relación entre las direcciones IP y MAC. Estudiar la salida del comando ip maddr.
+
+en MV1
+
+[root@MV1 ~]# ip maddr show dev eth0
+2:  eth0
+  link  01:00:5e:00:00:01
+  link  33:33:00:00:00:01
+  link  33:33:ff:00:02:00
+  inet  224.0.0.1
+
+  inet6 ff02::1:ff00:200 users 2
+
+  Se calculan como función de la dirección unicast del nodo:
+    FF02:0:0:0:0:1:FF00::/104 + 24 bits menos significativos de la dirección
+
+  inet6 ff02::1 ->  Link local.Un datagrama a esta dirección se envía a todos los interfaces del enlace local, pero nunca se encamina
+
+  inet6 ff01::1 ->  Iface local.Un datagrama a esta dirección se envía a una interfaz del nodo
+
+
+
+Para saber más… En el proceso de autoconfiguración se genera también el identificador de interfaz según el “extended unique identifier” (EUI-64) que se describe en el RFC 4193. La configuración del protocolo de anuncio de encaminadores tiene múltiples opciones que se pueden consultar en la documentación de zebra (ej. intervalo entre anuncios no solicitados). Cuando sólo se necesita un servicio que implemente el anuncio de prefijos, y no algoritmos de encaminamiento para el router, se puede usar el proyecto de código libre “Router Advertisement Daemon”, radvd.
+
+
+Ejercicio 5 [VM1]. La generación del identificador de interfaz mediante EUI-64 supone un problema de privacidad para las máquinas clientes, que pueden ser rastreadas por su dirección MAC. En estos casos, es conveniente activar las extensiones de privacidad para generar un identificador de interfaz pseudoaleatorio temporal para las direcciones globales. Activar las extensiones de privacidad en VM1 con sysctl -w net.ipv6.conf.eth0.use_tempaddr=2.
+
+[root@MV1 ~]# sysctl -w net.ipv6.conf.eth0.use_tempaddr=2
+net.ipv6.conf.eth0.use_tempaddr = 2
+
+
+ICMPv6
+El protocolo ICMPv6 permite el intercambio de mensajes para el control de la red, tanto para la detección de errores como para la consulta de la configuración de ésta. Durante el desarrollo de la práctica hemos visto los más importantes.
+Ejercicio 1. Generar mensajes de los siguientes tipos en la red y estudiarlos con ayuda de la herramienta wireshark:
+* Solicitud y respuesta de eco. (ping6 ... espec interfaz si es link local)
+* Solicitud y anuncio de encaminador. ( este y el siguiente se generan tirando y levantando )
+* Solicitud y anuncio de vecino.      ( la interfaz.                                        )
+* Destino inalcanzable - Sin ruta al destino (Code: 0). haciendo ping a una ip que no se pueda llegar se genera
+
+17  7.006902941 fd00:0:0:a::3 fd00::a:0:ff:fe00:100 ICMPv6  166 Destination Unreachable ( CODE 3 => Address unreachable)
+________________
+
+
+Ampliación de Sistemas Operativos y Redes
