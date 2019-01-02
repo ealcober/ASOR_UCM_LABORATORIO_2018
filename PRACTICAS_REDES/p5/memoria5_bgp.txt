@@ -1,0 +1,191 @@
+
+
+	Parte II. Protocolo exterior: BGP
+Preparación del entorno
+Configuraremos la topología de red con 3 AS, siendo uno de ellos el proveedor de los otros dos:
+  
+
+Nota: El prefijo 2001:db8::/32 está reservado para documentación y ejemplos (RFC 3849).
+Crearemos esta topología (sin las redes internas) con la herramienta vtopol y el siguiente fichero:
+netprefix inet
+machine 1 0 0 
+machine 2 0 0 1 1
+machine 3 0 1
+	
+
+Para facilitar la configuración de las máquinas, la siguiente tabla muestra las direcciones de cada uno de los interfaces de los encaminadores:
+
+Máquina Virtual		Router1
+Interfaz			eth0
+Red interna			inet0
+Dirección de red	2001:db8:200:1::/64
+Dirección IP		2001:db8:200:1::1
+
+Máquina Virtual		Router2
+Interfaz1			eth0
+Interfaz2			eth1
+Red interna1		inet0
+Red interna2		inet1
+Dirección de red1	2001:db8:200:1::/64
+Dirección de red2	2001:db8:200:2::/64
+Dirección IP1		2001:db8:200:1::2
+Dirección IP2		2001:db8:200:2::2
+
+Máquina Virtual		Router3
+Interfaz			eth0
+Red interna			inet1
+Dirección de red	2001:db8:200:2::/64
+Dirección IP		2001:db8:200:2::3
+	
+MV1
+[root@localhost ~]# ip l set dev eth0 up
+[root@localhost ~]# ip a add 2001:db8:200:1::1/64 dev eth0
+MV2
+[root@localhost ~]# ip l set dev eth0 up
+[root@localhost ~]# ip l set dev eth1 up
+[root@localhost ~]# ip a add 2001:db8:200:1::2/64 dev eth0
+[root@localhost ~]# ip a add 2001:db8:200:2::2/64 dev eth1
+MV3
+[root@localhost ~]# ip l set dev eth0 up
+[root@localhost ~]# ip a add 2001:db8:200:2::3/64 dev eth0
+
+Ejercicio 1. Determinar el tipo de AS y los prefijos de red que debe anunciar, teniendo en cuenta que el RIR ha asignado a cada AS prefijos de longitud 48 y que los prefijos anunciados deben agregarse al máximo.
+Número de AS  	    Tipo de AS      	Prefijos anunciados
+	
+  AS100 R1 			INTERNO				2001:db8:100::/47
+
+  AS200 R2 			EXTERNO				X
+
+  AS300 R3 			INTERNO				2001:db8:300::/47
+	
+Ejercicio 2. Configurar los encaminadores según se muestra en la figura anterior. Debe comprobarse la conectividad entre máquinas adyacentes.
+
+ok.
+
+Configuración del protocolo BGP
+
+
+Ejercicio 1. Configurar BGP en los encaminadores para que intercambien información:
+* Crear un archivo bgpd.conf en /etc/quagga usando como referencia el archivo que se muestra a continuación.
+
+MV1
+# Activar el encaminamiento BGP en el AS 100
+router bgp 100
+# Establecer el identificador de encaminador BGP
+bgp router-id 0.0.0.1
+# Añadir el encaminador BGP vecino en el AS 200
+neighbor 2001:db8:200:1::2 remote-as 200
+# Empezar a trabajar con direcciones IPv6
+address-family ipv6
+# Anunciar un prefijo de red agregado
+network 2001:db8:100::/47
+# Activar IPv6 en el encaminador BGP vecino
+neighbor 2001:db8:200:1::2 activate
+# Dejar de trabajar con direcciones IPv6
+exit-address-family
+
+MV2
+# Activar el encaminamiento BGP en el AS 200
+router bgp 200
+# Establecer el identificador de encaminador BGP
+bgp router-id 0.0.0.2
+# Añadir el encaminador BGP vecino en el AS 100
+neighbor 2001:db8:200:1::1 remote-as 100
+# Añadir el encaminador BGP vecino en el AS 300
+neighbor 2001:db8:200:2::3 remote-as 300
+# Empezar a trabajar con direcciones IPv6
+address-family ipv6
+# Anunciar un prefijo de red agregado
+# network 2001:db8:100::/47
+# Activar IPv6 en los encaminadores BGP vecinos
+neighbor 2001:db8:200:1::1 activate
+neighbor 2001:db8:200:2::3 activate
+# Dejar de trabajar con direcciones IPv6
+exit-address-family
+
+MV3
+# Activar el encaminamiento BGP en el AS 300
+router bgp 300
+# Establecer el identificador de encaminador BGP
+bgp router-id 0.0.0.3
+# Añadir el encaminador BGP vecino en el AS 200
+neighbor 2001:db8:200:2::2 remote-as 200
+# Empezar a trabajar con direcciones IPv6
+address-family ipv6
+# Anunciar un prefijo de red agregado
+network 2001:db8:300::/47
+# Activar IPv6 en el encaminador BGP vecino
+neighbor 2001:db8:200:2::2 activate
+# Dejar de trabajar con direcciones IPv6
+exit-address-family
+
+
+* Iniciar el servicio BGP (y zebra) con service bgpd start.
+
+OK
+
+Ejercicio 2. Consultar la tabla de encaminamiento de BGP y de zebra en cada encaminador con el el comando vtysh. Comprobar también la tabla de encaminamiento del kernel con el comando ip.
+$ sudo vtysh -c "show ipv6 bgp"
+...
+$ sudo vtysh -c "show ipv6 route"
+...
+$ ip -6 route
+...
+
+MV1
+
+[root@localhost ~]# vtysh -c "show ipv6 route"
+Codes: K - kernel route, C - connected, S - static, R - RIPng,
+       O - OSPFv6, I - IS-IS, B - BGP, A - Babel,
+       > - selected route, * - FIB route
+
+C>* ::1/128 is directly connected, lo
+C>* 2001:db8:200:1::/64 is directly connected, eth0
+B>* 2001:db8:300::/47 [20/0] via fe80::ff:fe00:200, eth0, 00:15:18
+C>* fe80::/64 is directly connected, eth0
+
+MV2
+
+[root@localhost ~]# vtysh -c "show ipv6 route"
+Codes: K - kernel route, C - connected, S - static, R - RIPng,
+       O - OSPFv6, I - IS-IS, B - BGP, A - Babel,
+       > - selected route, * - FIB route
+
+C>* ::1/128 is directly connected, lo
+B>* 2001:db8:100::/47 [20/0] via fe80::ff:fe00:100, eth0, 00:15:28
+C>* 2001:db8:200:1::/64 is directly connected, eth0
+C>* 2001:db8:200:2::/64 is directly connected, eth1
+B>* 2001:db8:300::/47 [20/0] via fe80::ff:fe00:300, eth1, 00:15:36
+C * fe80::/64 is directly connected, eth1
+C>* fe80::/64 is directly connected, eth0
+
+MV3
+
+[root@localhost ~]# vtysh -c "show ipv6 route"
+Codes: K - kernel route, C - connected, S - static, R - RIPng,
+       O - OSPFv6, I - IS-IS, B - BGP, A - Babel,
+       > - selected route, * - FIB route
+
+C>* ::1/128 is directly connected, lo
+B>* 2001:db8:100::/47 [20/0] via fe80::ff:fe00:201, eth0, 00:15:12
+C>* 2001:db8:200:2::/64 is directly connected, eth0
+C>* fe80::/64 is directly connected, eth0
+
+
+
+Ejercicio 3. Con ayuda de la herramienta wireshark, estudiar los mensajes BGP intercambiados (OPEN, KEEPALIVE y UPDATE).
+
+Mensajes BGP:
+
+○ OPEN: Establecimiento de la sesión BGP (semipermanente)
+	■ Identificador de AS y encaminador
+	■ Parámetros de configuración (tiempo hold y autenticación)
+○ UPDATE: Actualización incremental de la información de encaminamiento
+	■ Cada mensaje puede incluir una red alcanzable en CIDR con sus
+	atributos, incluida la ruta, y una lista de redes retiradas (withdrawn)
+○ NOTIFICATION: Se envía a los vecinos cuando se detecta un error
+	■ Implica un cierre de la sesión y las rutas asociadas serán inválidas
+	■ Ejemplos: tiempo hold excedido, error en los mensajes, falta de atributos...
+○ KEEPALIVE: Para asegurar que la sesión permanezca activa
+	■ En respuesta a un mensaje OPEN y periódicamente para informar de la presencia del encaminador (no usa keepalive de TCP)
+	■ Si pasado un tiempo (hold) no se recibe información, se cierra la sesión
