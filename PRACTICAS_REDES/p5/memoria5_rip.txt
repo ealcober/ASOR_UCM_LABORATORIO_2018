@@ -117,6 +117,8 @@ particular comprobar:
 ● Información para cada ruta: campos de dirección de red, máscara de red, dirección de siguiente
 salto y distancia.
 
+Addresses in the range of 224.0.0.0 to 224.0.0.255 are individually assigned by IANA and designated for multicasting on the local subnetwork only. For example, the Routing Information Protocol (RIPv2) uses 224.0.0.9, Open Shortest Path First (OSPF) uses 224.0.0.5 and 224.0.0.6, and Multicast DNS uses 224.0.0.251. Routers must not forward these messages outside the subnet from which they originate.
+
   /* dos primeros paquetes request y response resumidos */
 
 [root@localhost cursoredes]# cat wireshark_rip_req_resp.txt 
@@ -413,35 +415,93 @@ minutos (valor de ​ timeout ​ por defecto para las rutas), ha reajustado su 
 
 ANTES
 
-[root@localhost ~]# vtysh -c "show ip rip"
-Codes: R - RIP, C - connected, S - Static, O - OSPF, B - BGP
-Sub-codes:
-      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
-      (i) - interface
+[root@localhost ~]# vtysh -c "show ip route"
+Codes: K - kernel route, C - connected, S - static, R - RIP,
+       O - OSPF, I - IS-IS, B - BGP, A - Babel,
+       > - selected route, * - FIB route
 
-     Network            Next Hop         Metric From            Tag Time
-C(i) 172.16.0.0/16      0.0.0.0               1 self              0
-R(n) 172.17.0.0/16      172.16.0.2            2 172.16.0.2        0 02:24
-R(n) 172.18.0.0/16      172.19.0.4            2 172.19.0.4        0 02:40
-C(i) 172.19.0.0/16      0.0.0.0               1 self              0
-C(i) 192.168.0.0/24     0.0.0.0               1 self              0
-R(n) 192.168.1.0/24     172.16.0.2            2 172.16.0.2        0 02:24
-R(n) 192.168.2.0/24     172.16.0.2            3 172.16.0.2        0 02:24
-R(n) 192.168.3.0/24     172.19.0.4            2 172.19.0.4        0 02:40
+C>* 127.0.0.0/8 is directly connected, lo
+C>* 172.16.0.0/16 is directly connected, eth0
+R>* 172.17.0.0/16 [120/2] via 172.16.0.2, eth0, 3d23h52m
+R>* 172.18.0.0/16 [120/2] via 172.19.0.4, eth1, 3d23h52m
+C>* 172.19.0.0/16 is directly connected, eth1
+C>* 192.168.0.0/24 is directly connected, eth2
+R>* 192.168.1.0/24 [120/2] via 172.16.0.2, eth0, 3d23h52m
+R>* 192.168.2.0/24 [120/3] via 172.16.0.2, eth0, 3d23h52m
+R>* 192.168.3.0/24 [120/2] via 172.19.0.4, eth1, 3d23h52m
 
-[root@localhost ~]# vtysh -c "show ip rip"
-Codes: R - RIP, C - connected, S - Static, O - OSPF, B - BGP
-Sub-codes:
-      (n) - normal, (s) - static, (d) - default, (r) - redistribute,
-      (i) - interface
+DESPUÉS
 
-     Network            Next Hop         Metric From            Tag Time
-C(i) 172.16.0.0/16      0.0.0.0               1 self              0
-R(n) 172.17.0.0/16      172.16.0.2            2 172.16.0.2        0 03:00
-R(n) 172.18.0.0/16      172.16.0.2            3 172.16.0.2        0 03:00
-C(i) 172.19.0.0/16      0.0.0.0               1 self              0
-C(i) 192.168.0.0/24     0.0.0.0               1 self              0
-R(n) 192.168.1.0/24     172.16.0.2            2 172.16.0.2        0 03:00
-R(n) 192.168.2.0/24     172.16.0.2            3 172.16.0.2        0 03:00
-R(n) 192.168.3.0/24     172.16.0.2            4 172.16.0.2        0 03:00
-[root@localhost ~]# 
+[root@localhost ~]# vtysh -c "show ip route"
+Codes: K - kernel route, C - connected, S - static, R - RIP,
+       O - OSPF, I - IS-IS, B - BGP, A - Babel,
+       > - selected route, * - FIB route
+
+C>* 127.0.0.0/8 is directly connected, lo
+C>* 172.16.0.0/16 is directly connected, eth0
+R>* 172.17.0.0/16 [120/2] via 172.16.0.2, eth0, 3d23h52m
+C>* 172.19.0.0/16 is directly connected, eth1
+C>* 192.168.0.0/24 is directly connected, eth2
+R>* 192.168.1.0/24 [120/2] via 172.16.0.2, eth0, 3d23h52m
+R>* 192.168.2.0/24 [120/3] via 172.16.0.2, eth0, 3d23h52m
+
+Ejercicio 6 (Opcional) ​ . ​ Los servicios de Quagga pueden configurarse de forma interactiva mediante un terminal (​ telnet​ ), de forma similar a los encaminadores comerciales. Configurar ​ ripd​ vía VTY: 
+● Añadir “​ password redes​ ” al fichero ​ ripd.conf​, desactivar el protocolo (​ no router rip​ ) y comentar el resto de entradas. Una vez cambiado el archivo, reiniciar el servicio.
+● Conectar al VTY de ​ ripd y configurarlo. En cada comando se puede usar ​? para mostrar la ayuda asociada.
+
+[root@localhost ~]# /etc/init.d/network stop
+Stopping network (via systemctl):                          [  OK  ]
+[root@localhost ~]# /etc/init.d/network start
+Starting network (via systemctl):                          [  OK  ]
+[root@localhost ~]# systemctl restart ripd.service 
+Job for ripd.service failed because the control process exited with error code. See "systemctl status ripd.service" and "journalctl -xe" for details.
+[root@localhost ~]# telnet localhost ripd
+Trying ::1...
+telnet: connect to address ::1: Connection refused
+Trying 127.0.0.1...
+telnet: connect to address 127.0.0.1: Connection refused
+[root@localhost ~]# nano /etc/quagga/
+ripd.conf   vtysh.conf  zebra.conf  
+[root@localhost ~]# nano /etc/quagga/ripd.conf 
+[root@localhost ~]# systemctl restart ripd.service 
+[root@localhost ~]# telnet localhost ripd
+Trying ::1...
+telnet: connect to address ::1: Connection refused
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+
+Hello, this is Quagga (version 0.99.22.4).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+
+User Access Verification
+
+Password: 
+localhost.localdomain> enable
+localhost.localdomain# configure terminal
+localhost.localdomain(config)# router rip
+localhost.localdomain(config-router)# version 2
+localhost.localdomain(config-router)# network eth0
+localhost.localdomain(config-router)# write
+Can't backup old configuration file /etc/quagga/ripd.conf.sav.
+localhost.localdomain(config-router)# exit
+localhost.localdomain(config)# exit
+localhost.localdomain# show runn
+localhost.localdomain# show running-config 
+
+Current configuration:
+!
+password redes
+!
+router rip
+ version 2
+ network eth0
+!
+line vty
+!
+end
+localhost.localdomain# write
+Can't backup old configuration file /etc/quagga/ripd.conf.sav.
+localhost.localdomain# exit
+Connection closed by foreign host.
