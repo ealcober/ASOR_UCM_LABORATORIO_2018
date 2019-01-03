@@ -50,6 +50,21 @@ ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ (echo En una sub-shell; exit 1
 En una sub-shell
 terminó mal
 
+&& => Run the command to the right of the double-ampersand ONLY IF the command on the left succeeded in running. Example:
+mkdir stuff && echo "Made the directory" # Print a message on success of the mkdir command
+|| => Run the command on the right of the double pipe ONLY IF the command on the left failed. Example:
+mkdir stuff || echo "mkdir failed!" # Print a message on failure of the mkdir command
+; => Allows you to list multiple commands on a single line, separated by this character. Example:
+date;john passwd; date # Print the date, crack the passwords and print the date again afterwards - cheap benchmarking
+( ) => Grouping commands. If you want to run two commands and send their output to the same place, put them in a group together. Example:
+(cal; date) > filename.txt # Put a calendar and the date in filename.txt
+& => Run the process in the background, allowing you to continue your work on the command line. Example:
+john /etc/passwd & # Try to crack the passwords - this takes a couple hours, so do it in the background.
+Also used in redirection when copying one stream into the same location as another stream. Example:
+cat filename.txt > file2.txt 2>&1 # Send Standard Error (2) to the file2.txt where Standard Output (1) is going
+Pipe: This sends the output of the command to the left as the input to the command on the right of the symbol. Example:
+cat filename.txt | grep it # This will print the lines in filename.txt that contain the string "it"
+
 Ejercicio 1 . ​ ​ Consultar el entorno mediante ​ env​ , e identificar algunas variables importantes.
 
 ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ env
@@ -57,21 +72,17 @@ ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ env
 LANG=es_ES.UTF-8
 GDM_LANG=es_ES.UTF-8
 DISPLAY=:1
-USERNAME=ealcober
 JAVA_HOME=/usr/lib/jvm/java-8-oracle
 J2SDKDIR=/usr/lib/jvm/java-8-oracle
 XDG_VTNR=2
 XDG_SESSION_ID=4
-USER=ealcober
 DESKTOP_SESSION=openbox
-PWD=/home/ealcober/cuarto/ASOR/SSOO_PRACTICAS/p20
-HOME=/home/ealcober
+PWD=~/cuarto/ASOR/SSOO_PRACTICAS/p20
 SHELL=/bin/bash
 GDMSESSION=openbox
-LOGNAME=ealcober
 PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:
 /usr/lib/jvm/java-8-oracle/jre/bin
-OLDPWD=/home/ealcober/cuarto/ASOR/SSOO_PRACTICAS
+OLDPWD=~/cuarto/ASOR/SSOO_PRACTICAS
 _=/usr/bin/env
 
 // $ guarda codigo de salida
@@ -101,9 +112,9 @@ ealcober
 ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $UID
 1000
 ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $HOME
-/home/ealcober
+~
 ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $PWD
-/home/ealcober/cuarto/ASOR/SSOO_PRACTICAS/p20
+~/cuarto/ASOR/SSOO_PRACTICAS/p20
 ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $SHELL
 /bin/bash
 ealcober@debian:~/cuarto/ASOR/SSOO_PRACTICAS/p20$ echo $PPID
@@ -150,6 +161,8 @@ ealcober@debian:~$ echo "El usuario es `whoami`"
 El usuario es ealcober
 ealcober@debian:~$ echo "El usuario es $(whoami)"
 El usuario es ealcober
+ealcober@debian:~$ echo "Hoy es `date`"
+Hoy es jue ene  3 20:07:25 CET 2019
 
 
 El path
@@ -173,7 +186,7 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
-export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin://home/ealcober:/home/ealcober
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin:/~:~
 
 
 Ejercicio 3. La orden which determina qué comando se ejecutará cuando se usa en la línea de comandos.  Determinar qué fichero se usa para ejecutar bash, env, gzip, echo, set y ls. Además se puede ver qué tipo de archivo es con la orden file. 
@@ -193,13 +206,13 @@ ealcober@debian:~$ which echo
 Ejercicio 4. Siempre se puede ejecutar un comando que no esté en el path especificando su ruta completa, ya sea de forma relativa o absoluta. Quitar el valor de la variable PATH de la shell usando unset:
 
 ealcober@debian:~$ echo $PATH
-/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin://home/ealcober
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin:/~
 ealcober@debian:~$ unset PATH
 ealcober@debian:~$ echo $PATH
 
 ealcober@debian:~$ source .bashrc 
 ealcober@debian:~$ echo $PATH
-/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin://home/ealcober:/home/ealcober
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin:/~:~
 
 * Se puede mostrar la frase “Curso de Ampliación de SO” con echo, ¿por qué?
 * Usar el path absoluto del comando ls determinado en el ejercicio anterior para listar los archivos.
