@@ -32,25 +32,48 @@ Ejercicio 3. Escribir un programa que obtenga, con sysconf(3), la información d
 
 Ejercicio 4. Repetir el ejercicio anterior pero en este caso para la configuración del sistema de ficheros, con pathconf(3). Por ejemplo, que muestre el número máximo de enlaces, el tamaño máximo de una ruta y el de un nombre de fichero.
 
-
+ok.
 
 Información del usuario
+
+
 Ejercicio 1. El comando id(1) muestra la información de usuario real y efectiva. Consultar la página de manual y comprobar su funcionamiento.
 
 obvio.
 
 Ejercicio 2. Escribir un programa que muestre, igual que id, el UID real y efectivo del usuario. ¿Cuándo podríamos asegurar que el fichero del programa tiene activado el bit setuid?
 
+en carpeta el código.
 
+Lo podemos saber haciendo "ls -l" y viendo que el bit de permisos de ejecución está en "s" en vez de en x. Para activarlo hacemos chmod +s sobre el archivo en cuestión.
 
 Ejercicio 3. Modificar el programa anterior para que muestre además el nombre de usuario, el directorio home y la descripción del usuario.
+
+
+
 Información horaria del sistema
 Ejercicio 1. El comando date(1) muestra la hora del sistema. Consultar la página de manual y familiarizarse con los distintos formatos disponibles para mostrar la hora.
+
+
+
 Ejercicio 2. Escribir un programa que muestre la hora, en segundos desde el Epoch, usando la función time(2). 
+
+done.
+
 Ejercicio 3. Escribir un programa que mida, en microsegundos usando la función gettimeofday(2), lo que tarda un bucle que incrementa una variable un millón de veces.
+
+ok
+
 Ejercicio 4. Escribir un programa que muestre el año usando la función localtime(2).
+
+ok
+
 Ejercicio 5. Modificar el programa anterior para que imprima la hora de forma legible, como "lunes, 29 de octubre de 2018, 10:34", usando la función strftime(3).
+
 Nota: Para establecer la configuración regional o locale (como idioma o formato de hora) en el programa según la configuración actual, usar la función setlocale(3), por ejemplo, setlocale(LC_ALL, ""). Para cambiar la configuración regional, ejecutar, por ejemplo, export LC_ALL="es_ES", o bien, export LC_TIME="es_ES".
+
+
+
 ________________
 
 

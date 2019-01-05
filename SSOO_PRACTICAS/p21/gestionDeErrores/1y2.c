@@ -22,7 +22,7 @@ int main()
         perror(strerror(EPERM));
         break;
     case(-1):
-    	perror(strerror(-1));
+    	perror(strerror(-1)); q
         break;
 
     }
