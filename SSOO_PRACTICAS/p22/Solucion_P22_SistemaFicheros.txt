@@ -332,12 +332,22 @@ La shell proporciona operadores (>, >&, >>) que permiten redirigir un fichero a 
 Ejercicio 1. Escribir un programa que redirija la salida estándar a un fichero cuya ruta se pasa como primer argumento. Probar haciendo que el programa escriba varias cadenas en la salida estándar.
 
 
+en carpeta redireccion
 
 
+Ejercicio 2. Modificar el programa anterior para que además de escribir en el fichero la salida estándar también se escriba la salida estándar de error. Comprobar el funcionamiento incluyendo varias sentencias que impriman en ambos flujos. ¿Hay alguna diferencia si las redirecciones se hacen en diferente orden? NO ¿Por qué no es lo mismo “ls > dirlist 2>&1” que “ls 2>&1 > dirlist”?
 
-Ejercicio 2. Modificar el programa anterior para que además de escribir en el fichero la salida estándar también se escriba la salida estándar de error. Comprobar el funcionamiento incluyendo varias sentencias que impriman en ambos flujos. ¿Hay alguna diferencia si las redirecciones se hacen en diferente orden? ¿Por qué no es lo mismo “ls > dirlist 2>&1” que “ls 2>&1 > dirlist”?
+ok
+“ls > dirlist 2>&1” - guardame la salida estándar de ls en el archivo dirlist y los errores de esta operación me los sacas por la salida estándar.
+
+ls 2>&1 > dirlist - que mande los errores del comando ls así como su salida a dirlist
 
 Ejercicio 3 (Opcional). La llamada fcntl(2) también permite duplicar descriptores de fichero. Estudiar qué opciones hay que usar para que fcntl duplique los descriptores.
+
+
+
+en carpeta redireccion
+
 
 Cerrojos de ficheros
 El sistema de ficheros ofrece un sistema de bloqueos consultivo. Estas funciones se pueden acceder mediante flock o fcntl. En esta sección usaremos únicamente fcntl(2).

@@ -12,7 +12,11 @@ como primer argumento. Probar haciendo que el programa escriba varias cadenas en
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
-
+/*
+0 entrada - stdin
+1 salida  - stdout
+3 error   - stderr
+*/
 
 int main(int argc, char const *argv[])
 {
@@ -29,9 +33,9 @@ int main(int argc, char const *argv[])
         printf("%i - %s\n", errno, strerror(errno));
         return -1;
     }
+    // hace que la salida estándar apunte al descriptor de fichero fd. la llamada devuelve el seg. argumento (1)
 
-    int old_file_desc = dup2(fd, 1);
-    if(old_file_desc == -1)
+    if(dup2(fd, 1) == -1)
     {
         perror("error duplicando el descriptor\n");
     }
@@ -39,9 +43,7 @@ int main(int argc, char const *argv[])
     {
         printf("Salida estandar dirigida al fichero %s\n", argv[1]);
     }
-    
-    dup2(old_file_desc, fd);
-
+    // al salir se cierran automáticamente todos los descriptores de fichero abiertos por el proceso.
     return 0;
 }
 

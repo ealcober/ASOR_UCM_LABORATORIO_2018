@@ -30,9 +30,9 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    int old_file_desc = dup2(fd, 1);
+    int ret = dup2(fd, 1);
     dup2(fd, 2);
-    if(old_file_desc == -1)
+    if(ret == -1)
     {
         perror("error duplicando el descriptor\n");
     }
@@ -41,8 +41,6 @@ int main(int argc, char const *argv[])
         printf("Salida estandar dirigida al fichero %s\n", argv[1]);
         printf("Salida de error dirigida al fichero %s\n", argv[1]);
     }
-    
-    dup2(old_file_desc, fd);
 
     return 0;
 }
