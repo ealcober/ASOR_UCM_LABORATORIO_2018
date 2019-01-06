@@ -354,6 +354,8 @@ El sistema de ficheros ofrece un sistema de bloqueos consultivo. Estas funciones
 
 Ejercicio 1. El estado y cerrojos de fichero en uso en el sistema se pueden consultar en el archivo /proc/locks. Estudiar el contenido de este archivo.
 
+The fields are: ordinal number(1), type(2), mode(3), type(4), pid(5), maj:min:inode(6) start(7) end(8).
+
 Ejercicio 2. Escribir un programa que consulte y muestre en pantalla el estado del cerrojo sobre un fichero. El programa mostrará el estado del cerrojo (bloqueado, desbloqueado). Además:
 * Si está desbloqueado, fijará un cerrojo de escritura y escribirá la hora actual. Después suspenderá su ejecución durante 30 segundos (función sleep) y a continuación liberará el cerrojo.
 * Si el cerrojo está bloqueado terminará el programa.
