@@ -100,36 +100,25 @@ bash: cd: ohno/: Permiso denegado
 
 Ejercicio 5. Escribir un programa que, usando la llamada open, cree un fichero con los permisos rw-r--r-x. Comprobar el resultado y las características del fichero con la orden ls.
 
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <stdio.h>
 
 
+int main(){
 
-/*
-Escribir un programa que, usando la llamada open, cree un fichero con los permisos rw-r--r-x. (645)
-*/
-int main(int argc, char *argv[])
-{
-    // argv[0] nombre programa
-    // argv[1] nombre fichero a crear
-    int f1 = open(argv[1], O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IXOTH);
+  umask(0132);
+  int file = open("permisos645.txt", O_CREAT | O_RDONLY, 0777); //Este es nuestro caso en relación al enunciado
 
-    if (f1 == -1)
-    {
-        perror("error en la creación del fichero: ¿Ya existe?");
-        return 1;
-    }
-    else
-    {
-        close(f1);
-        return 0;
+  if(file == -1){
+    printf("No se pudo crear el fichero\n");
+    return -1;
+  }
+  else
+    printf("Creado el fichero correctamente\n");
 
-    }
-
-
+  return 0;
 }
 
 ealcober@debian:~/test/src$ gcc -o ej5 ej5.c 
@@ -158,40 +147,29 @@ usuario_vms@pto0503:~$ ls -la acme
 
 Ejercicio 7. Modificar el ejercicio 5 para que, antes de crear el fichero, se fije la máscara igual que en el ejercicio anterior. Una vez creado el fichero, debe restaurarse la máscara original del proceso. Comprobar el resultado con el comando ls.
 
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <stdio.h>
 
 
-
-/*
-Escribir un programa que, usando la llamada open, cree un fichero con los permisos rw-r--r-x. (645)
-*/
-int main(int argc, char *argv[])
+int main()
 {
-    // argv[0] nombre programa
-    // argv[1] nombre fichero a crear
-    umask(027);
-    int f1 = open(argv[1], O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IXOTH);
 
-    if (f1 == -1)
+    mode_t prevMask = umask(0027);
+    int file = open("permisos750.txt", O_CREAT | O_RDONLY, 0777); //Este es nuestro caso en relación al enunciado
+
+    if(file == -1)
     {
-        perror("error en la creación del fichero: ¿Ya existe?");
-        umask(022);
-        return 1;
+        printf("No se pudo crear el fichero\n");
+        return -1;
     }
     else
-    {
-        close(f1);
-        umask(022);
-        return 0;
-
-    }
-
-
+        printf("Creado el fichero correctamente\n");
+    umask(prevMask);
+    return 0;
 }
+
 
 usuario_vms@pto0503:~/p22_ealcober$ ./ej7 acme
 usuario_vms@pto0503:~/p22_ealcober$ touch acme2
@@ -230,97 +208,54 @@ Ejercicio 9. Escribir un programa que emule el comportamiento del comando stat y
 * El tipo de archivo (directorio, enlace simbólico o archivo ordinario)
 * La hora en la que se accedió el fichero por última vez. ¿Qué diferencia hay entre st_mtime y st_ctime?
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <sys/sysmacros.h>
-#include <time.h>
+int main(int argc, char *argv[])
+{
+    struct stat buf;
+    char timebuf[50];
+    int res = stat(argv[1], &buf);
+    struct timespec lastaccess = buf.st_atim;
+    struct tm *hora = localtime(&buf.st_atim.tv_sec);
+
+    printf("Número major del dispositivo: %u\n", major(buf.st_dev));
+    printf("Número minor del dispositivo: %u\n", minor(buf.st_dev));
+    printf("Número de inodo del archivo: %d\n", buf.st_ino);
+    printf("tipo: ");
+
+    if (S_ISREG(buf.st_mode))
+    {
+        printf("regular file\n");
+    }
+    else if (S_ISDIR(buf.st_mode))
+    {
+        printf("directory\n");
+    }
+    else if (S_ISCHR(buf.st_mode))
+    {
+        printf("character device\n");
+    }
+    else if (S_ISBLK(buf.st_mode))
+    {
+        printf("block device\n");
+    }
+    else if (S_ISFIFO(buf.st_mode))
+    {
+        printf("named fifo pipe\n");
+    }
+    else if (S_ISLNK(buf.st_mode))
+    {
+        printf("sym link\n");
+    }
+    else if (S_ISSOCK(buf.st_mode))
+    {
+        printf("socket\n");
+    }
+
+  strftime(timebuf, 50, "%D",hora);
+  printf("hora ultimo acceso: %s\n",timebuf);
 
 
 
-/*
-int stat(const char *pathname, struct stat *statbuf);
-
-struct stat {
-               dev_t     st_dev;         /* ID of device containing file 
-               ino_t     st_ino;         /* Inode number 
-               mode_t    st_mode;        /* File type and mode 
-               nlink_t   st_nlink;       /* Number of hard links 
-               uid_t     st_uid;         /* User ID of owner 
-               gid_t     st_gid;         /* Group ID of owner 
-               dev_t     st_rdev;        /* Device ID (if special file) 
-               off_t     st_size;        /* Total size, in bytes 
-               blksize_t st_blksize;     /* Block size for filesystem I/O 
-               blkcnt_t  st_blocks;      /* Number of 512B blocks allocated 
-
-               /* Since Linux 2.6, the kernel supports nanosecond
-                  precision for the following timestamp fields.
-                  For the details before Linux 2.6, see NOTES. 
-
-               struct timespec st_atim;  /* Time of last access 
-               struct timespec st_mtim;  /* Time of last modification
-               struct timespec st_ctim;  /* Time of last status change 
-
-           #define st_atime st_atim.tv_sec      /* Backward compatibility 
-           #define st_mtime st_mtim.tv_sec
-           #define st_ctime st_ctim.tv_sec
-           
-*/
-
-int main(int argc, char* argv[]){
-  
-  struct stat info;
-  stat(argv[1], &info);
-
-  struct tm* tm_info;
-  struct tm* tm_info2;
-
-  char buffer[26];
-
-  tm_info = localtime(&info.st_mtim.tv_sec);
-  tm_info2 = localtime(&info.st_ctim.tv_sec);
-
-  /*
-* El número major y minor asociado al dispositivo
-* El número de inodo del archivo
-* El tipo de archivo (directorio, enlace simbólico o archivo ordinario)
-* La hora en la que se accedió el fichero por última vez. ¿Qué diferencia hay entre st_mtime y st_ctime?
-  */
-  // con info.st_dev y las macros minor y major podemos sacar estos números
-  printf("ID of device containing file: %lu\n", info.st_dev);
-  printf("Major Number: %d\n", major(info.st_dev));
-  printf("Minor Number: %d\n", minor(info.st_dev));
-  printf("Inode number: %lu\n", info.st_ino);
-  printf("File type and mode: %u\n", info.st_mode);
-  /*printf("Number of hard links: %lu\n", info.st_nlink);
-  printf("User ID of owner: %d\n", info.st_uid);
-  printf("Group ID of owner: %d\n", info.st_gid);
-  printf("Device ID (if special file): %lu\n", info.st_rdev);
-  printf("Total size, in bytes: %li\n", info.st_size);
-  printf("Block size for filesystem I/O: %li\n", info.st_blksize);
-  printf("Number of 512B blocks allocated  %li\n", info.st_blocks); 
-  */
-
-/*
-struct timespec {
-    time_t   tv_sec;   //      seconds 
-    long     tv_nsec;  //      nanoseconds 
-}
-*/
-    // printf("%lld.%.9ld", (long long)ts.tv_sec, ts.tv_nsec)
-  printf("Time of last modification:");
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-    puts(buffer);
-    printf("Time of last status change:");
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info2);
-    puts(buffer);
-
-  //printf("Time of last modification: %lld.%.9ld\n", (long long)info.st_mtim.tv_sec, info.st_mtim.tv_nsec);  // Time of last modification
-  //printf("Time of last status change: %lld.%.9ld\n", (long long)info.st_ctim.tv_sec, info.st_ctim.tv_nsec);  // Time of last status change
-
-  return 0;
-
+    return 0;
 }
 
 
@@ -338,56 +273,57 @@ Ejercicio 11. Las llamadas link y symlink crean enlaces rígidos y simbólicos r
 #include <time.h>
 
 
-int main(int argc, char* argv[]){
+int main(int argc, char *argv[])
+{
 
-  struct stat info;
-  stat(argv[1], &info);
-  int longsym = strlen(argv[1])+4;
-    int longhard = strlen(argv[1])+5;
-  char nombreSym[longsym];
+    struct stat info;
+    stat(argv[1], &info);
+    int longsym = strlen(argv[1]) + 4;
+    int longhard = strlen(argv[1]) + 5;
+    printf("long nombre del archivo: %d\n",strlen(argv[1]));
+    char nombreSym[longsym];
     char nombreHard[longhard];
 
-    nombreSym[0]='\0';
-    nombreHard[0]='\0';
+    switch(info.st_mode & S_IFMT)
+    {
+    case S_IFREG:
+        printf("Regular File, linking\n");
 
-    //sprintf(nombreSym, "%s.sym", argv[1]);
-    // equivale a strcat(nombreSym, argv[1]);
-    //          strcat(nombreSym, ".sym");
-    //sprintf(nombreHard, "%s.hard", argv[1]);
-    // equivale a strcat(nombreHard, argv[1]);
-    //            strcat(nombreHard, ".hard");
-  switch(info.st_mode & S_IFMT){
-        case S_IFREG:
-            printf("Regular File, linking\n");
-            
-            sprintf(nombreSym, "%s.sym", argv[1]);
-            sprintf(nombreHard, "%s.hard", argv[1]);
-            
-            printf("%s\n",nombreHard);puts("\n");
-            printf("%s\n",nombreSym);puts("\n");
-            break;
-        case S_IFDIR:
-            printf("Directory\n");
-            break;
-        case S_IFBLK:
-            printf("Block Device\n");
-            break;
-        case S_IFCHR:
-            printf("Character Device\n");
-            break;
-        case S_IFSOCK:
-            printf("Socket\n");
-            break;
-        case S_IFLNK:
-            printf("Symbolic Link\n");
-            break;
+        sprintf(nombreSym, "%s.sym", argv[1]);
+        sprintf(nombreHard, "%s.hard", argv[1]);
+
+        printf("%s\n", nombreHard);
+        puts("\n");
+        printf("%s\n", nombreSym);
+        puts("\n");
+        link(argv[1], nombreHard);
+        symlink(argv[1], nombreSym);
+
+        break;
+    case S_IFDIR:
+        printf("this program only link files. This is a Directory\n");
+        break;
+    case S_IFBLK:
+        printf("this program only link files. This is a Block Device\n");
+        break;
+    case S_IFCHR:
+        printf("this program only link files. This is a Character Device\n");
+        break;
+    case S_IFSOCK:
+        printf("this program only link files. This is a Socket\n");
+        break;
+    case S_IFLNK:
+        printf("this program only link files. This is a Symbolic Link\n");
+        break;
 
 
 
+    }
+
+    return 0;
 }
 
-return 0;
-}
+
 
 
 Redirecciones y duplicación de descriptores
