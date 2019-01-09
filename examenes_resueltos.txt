@@ -1,0 +1,158 @@
+Teórico Feb-2018
+
+Pregunta 1 (1 punto). ​Describa brevemente el mecanismo que usa el protocolo IPv6 para añadir opciones a los datagramas.
+
+La cabecera tiene un campo next header que apunta (en caso de que exista) a la cabecera del primer campo opciones. Ésta incorpora un campo header length (8 bits), además del next header, que indica la longitud del payload de la opción. El primero indica la longitud de la cabecera y el siguiente apunta también a la siguiente cabecera de opciones. 
+
+Pregunta 2 (1 punto). ​Describa brevemente en qué consiste el algoritmo de encaminamiento de vector de rutas.
+
+A partir de la información sobre los destinos alcanzables en el AS (reachability),
+mediante un proceso de intercambio, cada encaminador obtiene:
+	○ La lista de destinos (redes) alcanzables
+	○ La ruta completa al destino, como lista de ASs que han de atravesarse
+
+
+Pregunta 3 (1 punto).​ Indique el nombre, tipo y datos del registro DNS para:
+A. Establecer el nombre alternativo web.ucm.es para el nombre de dominio www.ucm.es
+B. Asociar el nombre de dominio www.ucm.es a la IP 147.96.1.2
+C. Asociar la IP 147.96.1.2 al nombre de dominio www.ucm.es
+D. Establecer como servidor de correo del dominio ucm.es. la máquina mail.ucm.es
+
+A.CNAME
+web.ucm.es 	86400	IN 	CNAME	www.ucm.es
+B.A/AAAA
+www.ucm.es  86400	IN A 147.96.1.2
+C.PTR
+147.96.1.2 	IN PTR www.ucm.es 
+D.MX
+ucm.es 		IN MX	10	mail.ucm.es
+
+Pregunta 4 (1 punto). ​ Respecto a la máscara umask:
+● Describa su propósito
+	Establecer la máscara de permisos para la creación de ficheros y directorios.
+● ¿Es una propiedad que se define por usuario, para el sistema o por proceso?
+	El superusuario puede configurar una máscara diferente para cada usuario del sistema.
+	El sistema usa la máscara que tenga configurada el usuario.
+	Dentro del ámbito de un proceso se puede alterar la máscara, y esto es útil sobre todo para recortar permisos que nunca podrá tener un fichero creado por ese proceso.
+● ¿Qué efecto tiene la máscara 022?
+	Los permisos = mode && ~umask, por lo que en un sistema de permisos por defecto 666 para la creación de ficheros, crearía un fichero con permisos 644 -rw-r--r-- 
+
+Pregunta 5 (1 punto). ​Describa brevemente las alternativas para sincronizar las operaciones de E/S de un proceso sobre múltiples descriptores.
+
+● Alternativas:
+	○ E/S no bloqueante (encuesta)
+	○ E/S conducida por eventos (asíncrona)
+	○ Multiplexación de E/S (síncrona, con SELECT)
+
+Teórico Feb-2017.
+
+Pregunta​ ​1​ ​(1​ ​punto).​ ​Describa brevemente los mecanismos de retransmisión usados en TCP.
+
+- temporizador de retransmisión - cada conexión tiene un tiempo de timeout para recibir el ack, si se pasa, reenvía.
+- retransmisión rápida - cuando se reciben 3 ack's duplicados se retransmite el segmento referido.
+
+Pregunta​ ​2​ ​(1​ ​punto).​ ​¿Cuál es el propósito, ámbito y tipo de la dirección IPv6 de nodo solicitado?
+
+propósito: Descubrimiento de vecinos.
+Ámbito: link local
+tipo: multicast. FF02:0:0:0:0:1:FF00::/104 + 24 bits dirección unicast.
+
+Pregunta​ ​3​ ​(1​ ​punto).​ Explique la diferencia entre servidores DNS recursivos y no recursivos.
+
+No-recursivos: cuando no disponen el registro de la consulta devuelven una referencia al servidor de nombres que puede tenerlo.
+Recursivos: resuelven cada referencia hasta devolver la respuesta al cliente.
+
+Pregunta 4 (1 punto). ​Indique la diferencia entre UID real y UID efectivo de un proceso. ¿Cuándo pueden ser diferentes?.
+
+Los procesos disponen de un identificador de usuario (UID) y
+de grupo (GID), que corresponden a los identificadores del
+usuario que posee el proceso o, en general, a los del proceso
+que lo creó
+
+Además los procesos disponen de un identificador de usuario efectivo (EUID) y
+grupo efectivo (EGID), que son los que se comprueban para conceder permisos
+
+Pregunta 5 (1 punto). ​Enumere las diferencias entre una tubería sin nombre y una tubería con
+nombre.
+
+Las tuberías con nombre son las FIFO (mkfifo) que ocupan una entrada en el sistema de archivos.
+
+La comunicación mediante tuberías sin nombre se realiza únicamente entre procesos con relación de parentesco, pero la gestión de los datos y la e/s la realiza el núcleo del sistema.
+
+
+Teoría - Feb-2014
+
+1. Indicar tipo y ámbito de las siguientes direcciones IpV6:
+
+a) fe80::218:43ff:fe25:de20 - link local
+b) 2001:db8:2512::2 - reservada para ejemplos, unicast global
+c) fdfb:946e:2c3a:: - ULA, local
+d) ff02::1 - multicast permanente de ámbito de enlace local
+e) ff12::1180:add2 - multicast temporal ámbito de enlace local
+
+ffXX:/8 -- multicast
+  |
+  0000 permanente
+  0001 local
+
+2.
+
+MAC 				ab:cd:ef:gh:ij:kl
+ID INTERFAZ   		abcd:efFF:FEgh:ijkl
+
+- Conociendo tu MAC se puede generar el ID de interfaz, por lo que se conoce la IP de la máquina.
+
+3. comparar ARP de ipv4 con descubrimiento de vecinos de IPv6.
+
+ARP ipv4: Mensajes ethernet arp request/arp response. El query es a toda la red (broadcast)
+
+ND ipv6:  neighbor advertisement / neighbor solicitation. El neighbor solicitation va dirigido únicamente a un grupo multicast.
+
+5. ( 0,5 puntos) Describir de manera breve los tipos de encaminadores que están de nidos
+en OSPF.
+
+○ Intra-Area Routers (IA)
+	■ Localizado en un área (todos sus interfaces están en el área)
+	■ Mantiene sólo información de la topología de su área
+○ Area Border Routers (ABR)
+	■ Conectado a dos o más áreas, una de ellas la 0
+	■ Mantiene una DB para cada una de las áreas a las que está conectado
+○ AS Boundary Routers (ASBR)
+	■ Situado en la frontera del AS
+	■ Intercambia rutas entre la red OSPF y otros sistemas
+	■ Son responsables de transmitir rutas externas a la red OSPF
+	■ Puede inyectar en OSPF rutas aprendidas mediante otro protocolo, por
+	ejemplo RIP
+
+6. ( 0,5 puntos) Explicar brevemente los distintos tipos de Sistemas Autónomos y su relación
+entre ellos.
+
+Tipos de AS
+● Stub: Conectado únicamente a otro AS, es destino u origen para el tráfico
+	○ No permite transportar tráfico de tránsito de un AS a otro AS
+● Multihomed: Conectado a varios AS, pero sigue siendo destino y origen del tráfico
+de red
+	○ No permite transportar tráfico de tránsito
+● Tránsito: AS de tipo multihomed que permite el tráfico de tránsito
+
+7. ( 0,5 puntos) Explicar el mecanismo que aplica TCP para detectar y paliar una congestión leve en la red.
+
+●Cuando se pierde paquetes en Internet, la mayoría de las veces se debe a un
+problema de congestión en algún punto de la red:
+	○ El router no puede procesar y reexpedir paquetes al ritmo al que los recibe
+	○ Cuando el router se satura, empieza a descartar paquetes (incluidas las
+	confirmaciones)
+
+El emisor utiliza el ritmo de llegada de confirmaciones para regular el ritmo de
+envío de segmentos de datos, esto se implementa mediante VENTANA DE CONGESTIÓN. (CW)
+
+La situación de congestión en la red se detecta indirectamente POR LA Recepción de 3 ACKs duplicados Y POR LA Expiración del temporizador de retransmisión (timeout).
+
+( 0,5 puntos) Explicar brevemente el uso de los principales tipos de registros en el sistema
+DNS: A, AAAA, NS, MX, SOA, PTR.
+
+A - ADDRESS - traducción directa nombre-IP
+AAAA - igual ipv6
+NS - Name Server (Autoritativos)
+SOA (Start of Authority) - Serv. Autoritativos que marcan el comienzo de cada zona
+PTR (Pointer)			 - traducción inversa IP-nombre
