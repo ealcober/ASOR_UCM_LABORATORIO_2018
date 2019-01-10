@@ -82,7 +82,7 @@ main(int argc, char *argv[])
     /* fork */
     listen(sfd, 5);
     int i = 0;
-    pid_t pids[5];
+    int pids[5];
     while (i < 5)
     {
         ssize_t nbytes;
@@ -100,16 +100,16 @@ main(int argc, char *argv[])
                         service, NI_MAXSERV, NI_NUMERICSERV | NI_NUMERICHOST);
 
 
-
-        pids[i] = fork();
-        switch(pids[i])
+        i++;
+        pids[i - 1] = fork();
+        switch(pids[i - 1])
         {
         case -1:
             return -1;
             break;
         case 0: //hijo
-            
-            sprintf(buf, "%d Connection received from %s with src_port = %s, by process #%d\0\n", i, host, service, pids[i]);
+
+            sprintf(buf, "%d Connection received from %s with src_port = %s, by process #%d\0\n", i, host, service, pids[i - 1]);
             send(a, buf, BUF_SIZE, 0);
             recv(a, buf, BUF_SIZE, 0);
             switch(buf[0])
@@ -126,9 +126,8 @@ main(int argc, char *argv[])
 
             break;
         default://padre
-            //wait(&pid);
-            printf("Connection received from %s with src_port = %s, by process #%d", host, service, pids[i]);
-            i++;
+
+
 
             break;
         }
@@ -142,7 +141,7 @@ main(int argc, char *argv[])
     }
     int j;
     for(j = 0; j < 5; j++)
-        wait(&pids[j]);
+        waitpid(pids[j], 0, 0);
     printf("Todos los hijos han terminado.\n");
 
     close(a);
@@ -151,26 +150,3 @@ main(int argc, char *argv[])
 
 }
 
-/*
-peer_addr_len = sizeof(struct sockaddr_storage);
-        nread = recvfrom(sfd, buf, BUF_SIZE, 0,
-                         (struct sockaddr *) &peer_addr, &peer_addr_len);
-        if (nread == -1)
-            continue;               /* Ignore failed request
-
-        char host[NI_MAXHOST], service[NI_MAXSERV];
-
-        s = getnameinfo((struct sockaddr *) &peer_addr,
-                        peer_addr_len, host, NI_MAXHOST,
-                        service, NI_MAXSERV, NI_NUMERICSERV);
-        if (s == 0)
-            printf("Received %zd bytes from %s:%s\n",
-                   nread, host, service);
-        else
-            fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-
-        if (sendto(sfd, buf, nread, 0,
-                   (struct sockaddr *) &peer_addr,
-                   peer_addr_len) != nread)
-            fprintf(stderr, "Error sending response\n");
-*/
